@@ -5,4 +5,4 @@
 #define NODES_PER_BUCKET 24
 
 // Print debug output to stdout
-#define debug 0
+#define debug 1

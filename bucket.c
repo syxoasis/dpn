@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "node.h"
 #include "main.h"
 
@@ -26,6 +27,20 @@ int getBucketID(underlink_node check)
 	return ADDR_LEN;
 }
 
+/*	
+ *	long long unsigned int nodeIDComparator(const underlink_node* a, const underlink_node* b)
+ *
+ *	Used for qsort to determine whether the distance between
+ *	the current node and the two given nodes should result in
+ *	the node being moved in the working nodeset.
+ */
+ long long unsigned int nodeIDComparator(const underlink_node* a, const underlink_node* b)
+ {
+ 	if (getDistance(thisNode, *a) < getDistance(thisNode, *b)) return 1;
+ 	if (getDistance(thisNode, *a) > getDistance(thisNode, *b)) return -1;
+ 	return 0;
+ }
+
 /*
  * 	underlink_node getClosestAddressFromBuckets(underlink_node check)
  * 
@@ -34,35 +49,32 @@ int getBucketID(underlink_node check)
  *	appropriate bucket, working upwards until the closest
  *	address is found. 
  */
-underlink_node getClosestAddressFromBuckets(underlink_node check)
+underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 {
 	int startBucket = getBucketID(check);
 	
-	if (startBucket == 0)
+	if (startBucket == 0 || thisNode.nodeID == check.nodeID)
 		return thisNode;
-	
-	unsigned long long closeness;
-	underlink_node closest;
-	
+		
+	int lastdist;
+	underlink_node lastnode;
+
 	int b;
 	for (b = startBucket; b > 0; b --)
 	{
+		underlink_node nodes[NODES_PER_BUCKET];
+		memcpy(&nodes, &buckets[b], sizeof(struct underlink_node) * NODES_PER_BUCKET);
+		qsort(&nodes, NODES_PER_BUCKET, sizeof(struct underlink_node), nodeIDComparator);
+
 		int n;
-		for (n = 0; n < NODES_PER_BUCKET; n ++)
-		{			
-			if (buckets[b][n].nodeID == 0)
+		for (n = steps; n < NODES_PER_BUCKET; n ++)
+		{
+			if (nodes[n].nodeID == 0)
 				continue;
-		
-			int dist = getDistance(buckets[b][n], check);
-			if (dist < closeness)
-			{
-				closeness = dist;
-				closest = buckets[b][n];
-			}
+
+			return nodes[n];
 		}
 	}
-	
-	return closest;
 }
 
 /*
@@ -81,7 +93,7 @@ int addNodeToBuckets(underlink_node newnode)
 		if (buckets[b][n].nodeID == 0)
 		{
 			buckets[b][n] = newnode;
-			if (debug)
+			if (debug && 0)
 				printf("Inserted node %llu into bucket %i (pos %i)\n", newnode.nodeID, b, n);
 			return b;
 		}
@@ -99,7 +111,7 @@ int addNodeToBuckets(underlink_node newnode)
 		}
 	}
 	
-	if (debug)
+	if (debug && 0)
 		printf("Replacing node %llu (pos %i), with %llu in bucket %i\n",
 				buckets[b][i].nodeID, i, newnode.nodeID, b);
 	buckets[b][i] = newnode;
