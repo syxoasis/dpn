@@ -6,7 +6,7 @@
 #include "message.h"
 
 underlink_message* underlink_message_construct(underlink_messagetype messagetype,
-		unsigned long long localID, unsigned long long remoteID, int payloadsize)
+		uint64_t localID, uint64_t remoteID, int payloadsize)
 {
 	int payloadbytes;
 	if (messagetype == SEARCH)

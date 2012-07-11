@@ -1,10 +1,23 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <limits.h>
 #include "node.h"
 #include "main.h"
 
 extern underlink_node thisNode;
 extern underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
+
+void printbits(unsigned long long b, int n)
+{
+	for (--n; n >= 0; --n)
+	{
+		if ((n+1) % 8 == 0) printf(" ");
+		printf("%c", (b & 1ULL << n) ? '1' : '0');
+	}
+	printf("\n");
+}
 
 /*
  * 	int getBucketID(underlink_node check)
@@ -15,15 +28,17 @@ extern underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
  */
 int getBucketID(underlink_node check)
 {
+	uint64_t bits = ~0ULL >> 16;
+
 	int i;
 	for (i = ADDR_LEN; i > 0; i --)
 	{
-		unsigned long long bits = (1ULL << (i - 1ULL));
-		
-		if ((check.nodeID & bits) != (thisNode.nodeID & bits))
+		if ((check.nodeID & bits) == (thisNode.nodeID & bits))
 			return ADDR_LEN - i;
+		
+		bits <<= 1;
 	}
-	
+
 	return ADDR_LEN;
 }
 
@@ -34,12 +49,15 @@ int getBucketID(underlink_node check)
  *	the current node and the two given nodes should result in
  *	the node being moved in the working nodeset.
  */
- long long unsigned int nodeIDComparator(const underlink_node* a, const underlink_node* b)
- {
- 	if (getDistance(thisNode, *a) < getDistance(thisNode, *b)) return 1;
- 	if (getDistance(thisNode, *a) > getDistance(thisNode, *b)) return -1;
- 	return 0;
- }
+int nodeIDComparator(const void* a, const void* b)
+{	
+	struct underlink_node* ia = (struct underlink_node*) &a;
+	struct underlink_node* ib = (struct underlink_node*) &b;
+	
+	if (getDistance(thisNode, *ia) < getDistance(thisNode, *ib)) return 1;
+	if (getDistance(thisNode, *ia) > getDistance(thisNode, *ib)) return -1;
+	return 0;
+}
 
 /*
  * 	underlink_node getClosestAddressFromBuckets(underlink_node check)
@@ -52,16 +70,19 @@ int getBucketID(underlink_node check)
 underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 {
 	int startBucket = getBucketID(check);
+	printf("\tStart bucket: %i\n", startBucket);
 	
 	if (startBucket == 0 || thisNode.nodeID == check.nodeID)
 		return thisNode;
 		
-	int lastdist;
-	underlink_node lastnode;
+	int lastdist = 0;
+	underlink_node returnnode;
+	returnnode.nodeID = 0;
 
 	int b;
 	for (b = startBucket; b > 0; b --)
 	{
+		// this is not efficient
 		underlink_node nodes[NODES_PER_BUCKET];
 		memcpy(&nodes, &buckets[b], sizeof(struct underlink_node) * NODES_PER_BUCKET);
 		qsort(&nodes, NODES_PER_BUCKET, sizeof(struct underlink_node), nodeIDComparator);
@@ -69,12 +90,19 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 		int n;
 		for (n = steps; n < NODES_PER_BUCKET; n ++)
 		{
-			if (nodes[n].nodeID == 0)
+			if (nodes[n].nodeID == 0 || &nodes[n] == 0)
 				continue;
 
-			return nodes[n];
+			if (getDistance(nodes[n], check) < lastdist ||
+				lastdist == 0)
+			{
+				returnnode = nodes[n];
+				lastdist = getDistance(nodes[n], check);
+			}
 		}
 	}
+	
+	return returnnode;
 }
 
 /*
@@ -93,13 +121,13 @@ int addNodeToBuckets(underlink_node newnode)
 		if (buckets[b][n].nodeID == 0)
 		{
 			buckets[b][n] = newnode;
-			if (debug && 0)
+			if (debug && 1)
 				printf("Inserted node %llu into bucket %i (pos %i)\n", newnode.nodeID, b, n);
 			return b;
 		}
 	}
 	
-	unsigned long long closeness = 0;
+	uint64_t closeness = 0;
 	int i = 0;
 	for (n = 0; n < NODES_PER_BUCKET; n ++)
 	{
@@ -111,7 +139,7 @@ int addNodeToBuckets(underlink_node newnode)
 		}
 	}
 	
-	if (debug && 0)
+	if (debug && 1)
 		printf("Replacing node %llu (pos %i), with %llu in bucket %i\n",
 				buckets[b][i].nodeID, i, newnode.nodeID, b);
 	buckets[b][i] = newnode;

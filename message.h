@@ -14,8 +14,8 @@ underlink_messagetype;
 typedef struct underlink_message
 {
 	underlink_messagetype message;
-	unsigned long long localID;
-	unsigned long long remoteID;
+	uint64_t localID;
+	uint64_t remoteID;
 	int payloadsize;
 	union
 	{
@@ -26,7 +26,7 @@ typedef struct underlink_message
 underlink_message;
 
 underlink_message* underlink_message_construct(underlink_messagetype messagetype,
-unsigned long long localID, unsigned long long remoteID, int payloadsize);
+uint64_t localID, uint64_t remoteID, int payloadsize);
 int underlink_message_addnode(underlink_message* packet, underlink_node* node);
 int underlink_message_getkey(underlink_message* packet, void* output, int key);
 int underlink_message_pack(void* out, underlink_message* packet);
