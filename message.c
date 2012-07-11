@@ -7,7 +7,7 @@
 
 underlink_message* underlink_message_construct(underlink_messagetype messagetype,
 		uint64_t localID, uint64_t remoteID, int payloadsize)
-{
+{	
 	int payloadbytes;
 	if (messagetype == SEARCH)
 		payloadbytes = sizeof(underlink_nodelist) + (sizeof(underlink_nodelist) * payloadsize);
@@ -17,9 +17,13 @@ underlink_message* underlink_message_construct(underlink_messagetype messagetype
 	underlink_message* out = calloc(1, sizeof(underlink_message) + payloadbytes);
 
 	out->message = messagetype;
-	out->payloadsize = 0;
 	out->localID = localID;
 	out->remoteID = remoteID;
+	
+	if (messagetype == SEARCH)
+		out->payloadsize = 0;
+	else
+		out->payloadsize = payloadsize;
 
 	return out;
 }
@@ -98,6 +102,9 @@ void underlink_message_dump(underlink_message* packet)
 		return;
 
 	kp = (underlink_nodelist*) &packet->nodes;
+
+	if (packet->message != SEARCH)
+		return;
 
 	int i;
 	for (i = 0; i < packet->payloadsize; i ++)

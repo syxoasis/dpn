@@ -69,9 +69,7 @@ int nodeIDComparator(const void* a, const void* b)
  */
 underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 {
-	int startBucket = getBucketID(check);
-	printf("\tStart bucket: %i\n", startBucket);
-	
+	int startBucket = getBucketID(check);	
 	if (startBucket == 0 || thisNode.nodeID == check.nodeID)
 		return thisNode;
 		

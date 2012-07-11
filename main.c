@@ -71,6 +71,9 @@ int main(int argc, char* argv[])
 	{
 		underlink_node n;
 		n.nodeID = lrand48();
+		n.endpoint.sin_family = AF_INET;
+		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
+		n.endpoint.sin_port = htons(3456);
 		addNodeToBuckets(n);
 	}
 	
@@ -150,11 +153,6 @@ int main(int argc, char* argv[])
 			if (dst_addr->s6_addr[0] != 0xFD || dst_addr->s6_addr[1] != 0xFD) continue;
 			if (src_addr->s6_addr[0] != 0xFD || src_addr->s6_addr[1] != 0xFD) continue;
 				
-			char src[128], dst[128];
-			inet_ntop(AF_INET6, &headers->ip6_src, src, 128);
-			inet_ntop(AF_INET6, &headers->ip6_dst, dst, 128);
-			printf("Source: %s, destination: %s\n", src, dst);
-				
 			struct underlink_node source, destination, closest;
 			memset(&source, 0, sizeof(char) * 16);
 			memset(&destination, 0, sizeof(char) * 16);
@@ -166,9 +164,40 @@ int main(int argc, char* argv[])
 			
 			closest = getClosestAddressFromBuckets(destination, 0);
 			
-			printf("\tXOR difference: %llx\n", (source.nodeID ^ destination.nodeID));
-			printf("\tMatch ID: \t%llx\n", destination.nodeID);
-			printf("\tClosest ID: \t%llx\n", closest.nodeID);
+			if (closest.nodeID == 0)
+				continue;
+				
+			if (closest.endpoint.sin_addr.s_addr == 0)
+			{
+				fprintf(stderr, "Packet discarded: node %llu has no remote endpoint\n", closest.nodeID);
+				continue;
+			}
+			
+			if (debug)
+				printf("Read %li bytes from TUN/TAP\n", readvalue);
+			
+			struct underlink_message* msg = underlink_message_construct(FORWARD, thisNode.nodeID, closest.nodeID, readvalue);
+			char* sendbuffer = calloc(1, 1500);
+			memcpy(&msg->packetbuffer, buffer, readvalue);
+			int sendsize = underlink_message_pack(sendbuffer, msg);
+			
+			if (debug)
+			{
+				printf("Sending %i bytes to node %llu via neighbour %llu\n", sendsize, destination.nodeID, closest.nodeID);	
+				underlink_message_dump(msg);
+			}
+			
+			char src[128], dst[128];
+			inet_ntop(AF_INET6, &headers->ip6_src, src, 128);
+			inet_ntop(AF_INET6, &headers->ip6_dst, dst, 128);
+			printf("Source: %s/64, destination: %s/64\n", src, dst);
+				
+			if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
+			{
+				fprintf(stderr, "Socket error when attempting to send to %llu: ", closest.nodeID);
+				perror("sendto");
+				fprintf(stderr, "\n");
+			}
 		}
 	}
 }
