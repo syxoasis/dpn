@@ -9,7 +9,7 @@ gcc -g -c	node.c		-o node.o
 gcc -g -c 	message.c	-o message.o
 gcc -g 		main.o bucket.o	node.o message.o \
 				-o underlink
-# exit
+#exit
 (
 sleep 1;
 ifconfig tun0 inet6 add fdfd:1234:5678:4321::/64 
