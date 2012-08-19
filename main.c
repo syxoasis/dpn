@@ -115,10 +115,14 @@ int main(int argc, char* argv[])
 		strcpy(nodename, "/dev/tun0");
 		
 	char prefix[128];
-	short network = 0xFDFD;
+	short network = htons(0xFDFD);
 	memcpy((void*) &prefix, &network, 2);
 	memcpy((void*) &prefix + 2, (void*) &thisNode.nodeID + 2, ADDR_LEN);
 	memset((void*) &prefix + 8, 0, ADDR_LEN / 2);
+	
+	char presentational[128];
+	inet_ntop(AF_INET6, &prefix, &presentational, 128);
+	printf("Interface prefix: %s/64\n", presentational);
 
 	#ifdef __linux__	
 		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
@@ -126,22 +130,6 @@ int main(int argc, char* argv[])
 			fprintf(stderr, "Unable to find /dev/net/tun\n");
 			return -1;
 		}
-		
-		struct ifreq ifr;
-		strncpy(ifr.ifr_name, "tun0", 5);
-		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
-		
-		if (ioctl(tuntapfd, TUNSETIFF, (void *) &ifr) < 0)
-			perror("TUNSETIFF");
-			
-		struct in6_ifreq ifr6;
-		strncpy(&ifr6.ifr6_addr, "fdfd", 4);
-		memcpy(&ifr6.ifr6_addr + 4, &thisNode.nodeID, ADDR_LEN);
-		
-		ifr6.ifr6_prefixlen = 64;
-		
-		if (ioctl(sockfd, SIOCSIFADDR, &ifr6) < 0)
-	        perror("SIOCSIFADDR");
 	#else
 		if ((tuntapfd = open(nodename, O_RDWR)) < 0)
 		{
@@ -191,8 +179,8 @@ int main(int argc, char* argv[])
 			memset(&destination, 0, sizeof(char) * 16);
 			memcpy((void*) &source.nodeID + 2, (void*) &src_addr->s6_addr + 2, sizeof(char) * 8);
 			memcpy((void*) &destination.nodeID + 2, (void*) &dst_addr->s6_addr + 2, sizeof(char) * 8);
-			source.nodeID = ntohll(source.nodeID);
-			destination.nodeID = ntohll(destination.nodeID);
+			source.nodeID = source.nodeID;
+			destination.nodeID = destination.nodeID;
 			
 			if (source.nodeID != thisNode.nodeID)
 			{
