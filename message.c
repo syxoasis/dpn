@@ -9,7 +9,7 @@ underlink_message* underlink_message_construct(underlink_messagetype messagetype
 		uint64_t localID, uint64_t remoteID, int payloadsize)
 {	
 	int payloadbytes;
-	if (messagetype == SEARCH)
+	if (messagetype == KEYPAIR)
 		payloadbytes = sizeof(underlink_nodelist) + (sizeof(underlink_nodelist) * payloadsize);
 	else
 		payloadbytes = sizeof(underlink_nodelist) + payloadsize;
@@ -20,7 +20,7 @@ underlink_message* underlink_message_construct(underlink_messagetype messagetype
 	out->localID = localID;
 	out->remoteID = remoteID;
 	
-	if (messagetype == SEARCH)
+	if (messagetype == KEYPAIR)
 		out->payloadsize = 0;
 	else
 		out->payloadsize = payloadsize;
@@ -77,7 +77,7 @@ int underlink_message_getkey(underlink_message* packet, void* output, int key)
 int underlink_message_pack(void* out, underlink_message* packet)
 {
 	int size;
-	if (packet->message == SEARCH)
+	if (packet->message == KEYPAIR)
 		size = sizeof(underlink_message) + (sizeof(underlink_nodelist) * packet->payloadsize);
 	else
 		size = sizeof(underlink_message) + packet->payloadsize;
@@ -103,8 +103,24 @@ void underlink_message_dump(underlink_message* packet)
 
 	kp = (underlink_nodelist*) &packet->nodes;
 
-	if (packet->message != SEARCH)
+	if (packet->message == IPPACKET)
+	{
+		printf("\tPacket contents:\n\t");
+		
+		int s;
+		for (s = 0; s < packet->payloadsize; s ++)
+		{
+			printf("%02x", packet->packetbuffer[s]);
+			
+			if (s % 16 == 0)
+			 	printf("\n\t");
+			else
+			if (s % 4 == 0)
+				printf(" ");
+		}
+		
 		return;
+	}
 
 	int i;
 	for (i = 0; i < packet->payloadsize; i ++)

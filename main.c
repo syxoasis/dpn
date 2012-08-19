@@ -20,6 +20,8 @@
 underlink_node thisNode;
 underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
 
+int sockfd, tuntapfd;
+
 int max(int a, int b)
 {
 	return a > b ? a : b;
@@ -29,7 +31,6 @@ int main(int argc, char* argv[])
 {
 	int portnumber = 3456;
 	int opt;
-	int sockfd, tuntapfd;
 	char nodename[16];
 	fd_set selectlist;
 	
@@ -61,10 +62,13 @@ int main(int argc, char* argv[])
 	}
 
 	srand(time(NULL));
-	thisNode.nodeID = lrand48();
+	//thisNode.nodeID = lrand48();
+	thisNode.nodeID = 20015998321441LLU;
 	thisNode.endpoint.sin_family = AF_INET;
+	thisNode.routermode = DIRECT_ONLY;
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
 	thisNode.endpoint.sin_port = htons(portnumber);
+	addNodeToBuckets(thisNode);
 	
 	int i;
 	for (i = 0; i < 15; i ++)
@@ -73,7 +77,8 @@ int main(int argc, char* argv[])
 		n.nodeID = lrand48();
 		n.endpoint.sin_family = AF_INET;
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
-		n.endpoint.sin_port = htons(3456);
+		n.endpoint.sin_port = htons(3457);
+		n.routermode = ROUTER;
 		addNodeToBuckets(n);
 	}
 	
@@ -84,6 +89,12 @@ int main(int argc, char* argv[])
 	if (sockfd < 0)
 	{
 		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+	
+	if (bind(sockfd, (struct sockaddr*) &thisNode.endpoint, sizeof(struct sockaddr_in)) < 0)
+	{
+		perror("bind");
 		exit(EXIT_FAILURE);
 	}
 	
@@ -136,10 +147,10 @@ int main(int argc, char* argv[])
 		
 		if (FD_ISSET(tuntapfd, &selectlist) != 0)
 		{
-			char buffer[1500];
+			char buffer[MTU];
 			struct ip6_hdr* headers = (struct ip6_hdr*) &buffer;
 			
-			long readvalue = read(tuntapfd, &buffer, 1500);
+			long readvalue = read(tuntapfd, &buffer, MTU);
 			
 			if (readvalue < 0)
 			{
@@ -152,52 +163,93 @@ int main(int argc, char* argv[])
 			
 			if (dst_addr->s6_addr[0] != 0xFD || dst_addr->s6_addr[1] != 0xFD) continue;
 			if (src_addr->s6_addr[0] != 0xFD || src_addr->s6_addr[1] != 0xFD) continue;
-				
-			struct underlink_node source, destination, closest;
+		
+			struct underlink_node source, destination;
 			memset(&source, 0, sizeof(char) * 16);
 			memset(&destination, 0, sizeof(char) * 16);
-			memset(&closest, 0, sizeof(char) * 16);
 			memcpy((void*) &source.nodeID + 2, (void*) &src_addr->s6_addr + 2, sizeof(char) * 8);
-			memcpy((void*) &destination.nodeID + 2, (void*) &dst_addr->s6_addr + 2, sizeof(char) * 8);			
+			memcpy((void*) &destination.nodeID + 2, (void*) &dst_addr->s6_addr + 2, sizeof(char) * 8);
 			source.nodeID = ntohll(source.nodeID);
 			destination.nodeID = ntohll(destination.nodeID);
 			
-			closest = getClosestAddressFromBuckets(destination, 0);
-			
-			if (closest.nodeID == 0)
-				continue;
-				
-			if (closest.endpoint.sin_addr.s_addr == 0)
+			if (source.nodeID != thisNode.nodeID)
 			{
-				fprintf(stderr, "Packet discarded: node %llu has no remote endpoint\n", closest.nodeID);
+				fprintf(stderr, "Packet discarded: spoofing attempt from %llu (this node: %llu)\n", source.nodeID, thisNode.nodeID);
 				continue;
 			}
-			
-			if (debug)
-				printf("Read %li bytes from TUN/TAP\n", readvalue);
-			
-			struct underlink_message* msg = underlink_message_construct(FORWARD, thisNode.nodeID, closest.nodeID, readvalue);
-			char* sendbuffer = calloc(1, 1500);
-			memcpy(&msg->packetbuffer, buffer, readvalue);
-			int sendsize = underlink_message_pack(sendbuffer, msg);
-			
-			if (debug)
-			{
-				printf("Sending %i bytes to node %llu via neighbour %llu\n", sendsize, destination.nodeID, closest.nodeID);	
-				underlink_message_dump(msg);
-			}
-			
-			char src[128], dst[128];
-			inet_ntop(AF_INET6, &headers->ip6_src, src, 128);
-			inet_ntop(AF_INET6, &headers->ip6_dst, dst, 128);
-			printf("Source: %s/64, destination: %s/64\n", src, dst);
-				
-			if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
-			{
-				fprintf(stderr, "Socket error when attempting to send to %llu: ", closest.nodeID);
-				perror("sendto");
-				fprintf(stderr, "\n");
-			}
+							
+			sendIPPacket(buffer, readvalue, source, destination, headers);		
 		}
+		
+		if (FD_ISSET(sockfd, &selectlist) != 0)
+		{
+			char buffer[MTU];
+			struct underlink_message* message = (underlink_message*) &buffer;
+			
+			long readvalue = read(sockfd, &buffer, MTU);
+			
+			if (message->remoteID != thisNode.nodeID &&
+				thisNode.routermode != ROUTER)
+				continue;
+				
+		//	underlink_message_dump(message);
+
+			//sendIPPacket(buffer, readvalue, message->remoteID, message->localID, 0);
+		}
+	}
+}
+
+int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink_node destination, struct ip6_hdr* headers)
+{		
+	underlink_node closest;
+	memset(&closest, 0, sizeof(char) * 16);
+
+	closest = getClosestAddressFromBuckets(destination, 0, ROUTER);
+
+	if (closest.nodeID == 0)
+	{
+		fprintf(stderr, "Remote node %llu is not accessible; no intermediate router known\n", destination.nodeID);
+		return -1;
+	}
+		
+	if (closest.nodeID == destination.nodeID && debug)
+		fprintf(stderr, "Neighbouring node %llu directly accessible\n", destination.nodeID);
+
+	if (closest.endpoint.sin_addr.s_addr == 0)
+	{
+		fprintf(stderr, "Packet discarded: node %llu has no remote endpoint\n", closest.nodeID);
+		return -1;
+	}
+		
+	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.nodeID, closest.nodeID, length);
+	char* sendbuffer = calloc(1, MTU);
+	memcpy(&msg->packetbuffer, buffer, length);
+	int sendsize = underlink_message_pack(sendbuffer, msg);
+	
+	if (debug)
+	{
+		printf("Sending %lu bytes to node %llu via %llu\n", length, destination.nodeID, closest.nodeID);	
+	//	underlink_message_dump(msg);
+	}
+	
+/*	if (destination.nodeID == thisNode.nodeID)
+	{
+		if (write(tuntapfd, sendbuffer, sendsize) < 0)
+		{
+			fprintf(stderr, "TUN/TAP error: ");
+			perror("write");
+			fprintf(stderr, "\n");
+			
+			return -1;
+		}
+		
+		return 0;
+	}*/
+
+	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
+	{
+		fprintf(stderr, "Socket error when attempting to send to %llu: ", closest.nodeID);
+		perror("sendto");
+		fprintf(stderr, "\n");
 	}
 }

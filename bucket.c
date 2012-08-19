@@ -67,7 +67,7 @@ int nodeIDComparator(const void* a, const void* b)
  *	appropriate bucket, working upwards until the closest
  *	address is found. 
  */
-underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
+underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, underlink_routermode routermode)
 {
 	int startBucket = getBucketID(check);	
 	if (startBucket == 0 || thisNode.nodeID == check.nodeID)
@@ -78,7 +78,7 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 	returnnode.nodeID = 0;
 
 	int b;
-	for (b = startBucket; b > 0; b --)
+	for (b = ADDR_LEN; b > 0; b --)
 	{
 		// this is not efficient
 		underlink_node nodes[NODES_PER_BUCKET];
@@ -87,8 +87,11 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 
 		int n;
 		for (n = steps; n < NODES_PER_BUCKET; n ++)
-		{
+		{			
 			if (nodes[n].nodeID == 0 || &nodes[n] == 0)
+				continue;
+				
+			if (nodes[n].routermode != routermode)
 				continue;
 
 			if (getDistance(nodes[n], check) < lastdist ||
@@ -120,7 +123,9 @@ int addNodeToBuckets(underlink_node newnode)
 		{
 			buckets[b][n] = newnode;
 			if (debug && 1)
-				printf("Inserted node %llu into bucket %i (pos %i)\n", newnode.nodeID, b, n);
+				printf("Inserted %s node %llu into bucket %i (pos %i)\n",
+							newnode.routermode == ROUTER ? "router" : "direct-only",
+							newnode.nodeID, b, n);
 			return b;
 		}
 	}
