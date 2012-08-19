@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 			
 		struct in6_ifreq ifr6;
 		strncpy(&ifr6.ifr6_addr, "fdfd", 4);
-		memcpy(&ifr6.ifr6_addr, &thisNode.nodeID, ADDR_LEN);
+		memcpy(&ifr6.ifr6_addr + 4, &thisNode.nodeID, ADDR_LEN);
 		
 		ifr6.ifr6_prefixlen = 64;
 		
