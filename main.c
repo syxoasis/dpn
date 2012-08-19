@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <sys/ioctl.h>
@@ -21,6 +22,13 @@ underlink_node thisNode;
 underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
 
 int sockfd, tuntapfd;
+
+struct in6_ifreq
+{
+    struct in6_addr ifr6_addr;
+    uint32_t ifr6_prefixlen;
+    unsigned int ifr6_ifindex;
+};
 
 int max(int a, int b)
 {
@@ -70,7 +78,7 @@ int main(int argc, char* argv[])
 	thisNode.endpoint.sin_port = htons(portnumber);
 	addNodeToBuckets(thisNode);
 	
-	int i;
+/*	int i;
 	for (i = 0; i < 15; i ++)
 	{
 		underlink_node n;
@@ -80,7 +88,7 @@ int main(int argc, char* argv[])
 		n.endpoint.sin_port = htons(3456);
 		n.routermode = ROUTER;
 		addNodeToBuckets(n);
-	}
+	}	*/
 	
 	printf("My node ID: %llu\n", thisNode.nodeID);
 	
@@ -100,32 +108,51 @@ int main(int argc, char* argv[])
 	
 	if (nodename)
 		strcpy(nodename, "/dev/tun0");
-		
-	#ifdef __linux__
-		struct ifreq ifr;
-		memset(&ifr, 0, sizeof(ifr));
-	
+
+	#ifdef __linux__	
 		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
 		{
 			fprintf(stderr, "Unable to find /dev/net/tun\n");
 			return -1;
 		}
-	
-		strcpy(ifr.ifr_name, nodename);
-		ifr.ifr_flags = IFF_TUN;
-		ifr.ifr_flags |= IFF_NO_PI;
-	
+		
+		/*
+		struct ifreq ifr;
+		strncpy(ifr.ifr_name, "tun0", 5);
+		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+		
 		if (ioctl(tuntapfd, TUNSETIFF, (void *) &ifr) < 0)
-		{
-			fprintf(stderr, "Unable to configure tuntap device\n");
-			return -1;
-		}
+			perror("TUNSETIFF");
+			
+		struct in6_ifreq ifr6;
+		strncpy(&ifr6.ifr6_addr, "fdfd", 4);
+		memcpy(&ifr6.ifr6_addr, &thisNode.nodeID, ADDR_LEN);
+		
+		ifr6.ifr6_prefixlen = 64;
+		
+		if (ioctl(sockfd, SIOCSIFADDR, &ifr6) < 0)
+	        perror("SIOCSIFADDR");
+	    */
 	#else
 		if ((tuntapfd = open(nodename, O_RDWR)) < 0)
 		{
 			fprintf(stderr, "Unable to open tuntap device '%s'\n", nodename);
 			return -1;
 		}
+		
+		struct ifreq ifr;
+		struct in6_ifreq ifr6;
+		
+		int socv6 = socket(AF_INET6, SOCK_DGRAM, 0);
+	//	strcpy(ifr.ifr_name, "tun0");
+	//	ioctl(socv6, SIOGIFINDEX, &ifr);
+		
+	//	ifr6.ifr6_ifindex = ifr.ifr_ifindex;
+		ifr6.ifr6_prefixlen = 64;
+		
+	//	struct in6_addr ipv6add = (struct in6_addr*) &ifr.ifr_addr;
+	//	inet_pton(AF_INET6, "fe80::19", &ifr6.ifr6_addr);
+		ioctl(socv6, SIOCSIFADDR, &ifr6);
 	#endif
 	
 	while (1)
