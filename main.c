@@ -10,6 +10,11 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/select.h>
+
+#ifdef __linux__
+	#include <linux/if_tun.h>
+#endif
+
 #include "main.h"
 #include "node.h"
 #include "bucket.h"
@@ -116,7 +121,6 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 		
-		/*
 		struct ifreq ifr;
 		strncpy(ifr.ifr_name, "tun0", 5);
 		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
@@ -132,7 +136,6 @@ int main(int argc, char* argv[])
 		
 		if (ioctl(sockfd, SIOCSIFADDR, &ifr6) < 0)
 	        perror("SIOCSIFADDR");
-	    */
 	#else
 		if ((tuntapfd = open(nodename, O_RDWR)) < 0)
 		{
