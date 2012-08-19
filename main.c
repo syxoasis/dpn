@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 
 	srand(time(NULL));
 	//thisNode.nodeID = lrand48();
-	thisNode.nodeID = 20015998321441LLU;
+	thisNode.nodeID = htonll(20015998321441LLU);
 	thisNode.endpoint.sin_family = AF_INET;
 	thisNode.routermode = DIRECT_ONLY;
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
@@ -113,6 +113,12 @@ int main(int argc, char* argv[])
 	
 	if (nodename)
 		strcpy(nodename, "/dev/tun0");
+		
+	char prefix[128];
+	short network = 0xFDFD;
+	memcpy((void*) &prefix, &network, 2);
+	memcpy((void*) &prefix + 2, (void*) &thisNode.nodeID + 2, ADDR_LEN);
+	memset((void*) &prefix + 8, 0, ADDR_LEN / 2);
 
 	#ifdef __linux__	
 		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
@@ -142,20 +148,6 @@ int main(int argc, char* argv[])
 			fprintf(stderr, "Unable to open tuntap device '%s'\n", nodename);
 			return -1;
 		}
-		
-		struct ifreq ifr;
-		struct in6_ifreq ifr6;
-		
-		int socv6 = socket(AF_INET6, SOCK_DGRAM, 0);
-	//	strcpy(ifr.ifr_name, "tun0");
-	//	ioctl(socv6, SIOGIFINDEX, &ifr);
-		
-	//	ifr6.ifr6_ifindex = ifr.ifr_ifindex;
-		ifr6.ifr6_prefixlen = 64;
-		
-	//	struct in6_addr ipv6add = (struct in6_addr*) &ifr.ifr_addr;
-	//	inet_pton(AF_INET6, "fe80::19", &ifr6.ifr6_addr);
-		ioctl(socv6, SIOCSIFADDR, &ifr6);
 	#endif
 	
 	while (1)
