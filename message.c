@@ -110,14 +110,13 @@ void underlink_message_dump(underlink_message* packet)
 		int s;
 		for (s = 0; s < packet->payloadsize; s ++)
 		{
-			printf("%02x", packet->packetbuffer[s]);
-			
-			if (s % 16 == 0)
+			printf("%08x ", packet->packetbuffer[s]);
+
+			if (s % 8 == 0)
 			 	printf("\n\t");
-			else
-			if (s % 4 == 0)
-				printf(" ");
 		}
+		
+		printf("\n");
 		
 		return;
 	}

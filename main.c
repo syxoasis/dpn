@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 		n.nodeID = lrand48();
 		n.endpoint.sin_family = AF_INET;
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
-		n.endpoint.sin_port = htons(3457);
+		n.endpoint.sin_port = htons(3456);
 		n.routermode = ROUTER;
 		addNodeToBuckets(n);
 	}
@@ -188,13 +188,22 @@ int main(int argc, char* argv[])
 			
 			long readvalue = read(sockfd, &buffer, MTU);
 			
-			if (message->remoteID != thisNode.nodeID &&
-				thisNode.routermode != ROUTER)
-				continue;
-				
-		//	underlink_message_dump(message);
-
-			//sendIPPacket(buffer, readvalue, message->remoteID, message->localID, 0);
+			if (message->remoteID == thisNode.nodeID)
+			{
+				if (write(tuntapfd, message->packetbuffer, message->payloadsize) < 0)
+				{
+					fprintf(stderr, "TUN/TAP error when attempting to write to adapter: ");
+					perror("write");
+					fprintf(stderr, "\n");
+				}
+			}
+				else
+			{
+				if (thisNode.routermode == ROUTER)
+					sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
+				else
+					fprintf(stderr, "Packet discarded: illegal attempt to route for node %llu\n", message->remoteID);
+			}
 		}
 	}
 }
@@ -211,9 +220,6 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		fprintf(stderr, "Remote node %llu is not accessible; no intermediate router known\n", destination.nodeID);
 		return -1;
 	}
-		
-	if (closest.nodeID == destination.nodeID && debug)
-		fprintf(stderr, "Neighbouring node %llu directly accessible\n", destination.nodeID);
 
 	if (closest.endpoint.sin_addr.s_addr == 0)
 	{
@@ -223,28 +229,11 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		
 	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.nodeID, closest.nodeID, length);
 	char* sendbuffer = calloc(1, MTU);
-	memcpy(&msg->packetbuffer, buffer, length);
+	memcpy(&msg->packetbuffer, &buffer, length);
 	int sendsize = underlink_message_pack(sendbuffer, msg);
 	
 	if (debug)
-	{
 		printf("Sending %lu bytes to node %llu via %llu\n", length, destination.nodeID, closest.nodeID);	
-	//	underlink_message_dump(msg);
-	}
-	
-/*	if (destination.nodeID == thisNode.nodeID)
-	{
-		if (write(tuntapfd, sendbuffer, sendsize) < 0)
-		{
-			fprintf(stderr, "TUN/TAP error: ");
-			perror("write");
-			fprintf(stderr, "\n");
-			
-			return -1;
-		}
-		
-		return 0;
-	}*/
 
 	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
 	{
@@ -252,4 +241,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		perror("sendto");
 		fprintf(stderr, "\n");
 	}
+	
+	free(sendbuffer);
+	free(msg);
 }
