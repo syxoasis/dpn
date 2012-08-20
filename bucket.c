@@ -121,8 +121,9 @@ int addNodeToBuckets(underlink_node newnode)
 	{
 		if (buckets[b][n].nodeID == 0)
 		{
-			buckets[b][n] = newnode;
-			if (debug && 1)
+			memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
+			
+			if (debug)
 				printf("Inserted %s node %llu into bucket %i (pos %i)\n",
 							newnode.routermode == ROUTER ? "router" : "direct-only",
 							newnode.nodeID, b, n);
@@ -142,10 +143,11 @@ int addNodeToBuckets(underlink_node newnode)
 		}
 	}
 	
-	if (debug && 1)
+	if (debug)
 		printf("Replacing node %llu (pos %i), with %llu in bucket %i\n",
 				buckets[b][i].nodeID, i, newnode.nodeID, b);
-	buckets[b][i] = newnode;
+				
+	memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
 	
 	return b;
 }

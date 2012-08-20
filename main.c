@@ -20,11 +20,8 @@
 #include "bucket.h"
 #include "message.h"
 
-#define ntohll(x) (((uint64_t)(ntohl((uint32_t)((x << 32) >> 32))) << 32) | ntohl(((uint32_t)(x >> 32))))                                        
-#define htonll(x) ntohll(x)
-
-underlink_node thisNode;
 underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
+underlink_node thisNode;
 
 int sockfd, tuntapfd;
 
@@ -75,15 +72,8 @@ int main(int argc, char* argv[])
 	}
 
 	srand(time(NULL));
-	//thisNode.nodeID = lrand48();
-	thisNode.nodeID = htonll(20015998321441LLU);
-	thisNode.endpoint.sin_family = AF_INET;
-	thisNode.routermode = DIRECT_ONLY;
-	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
-	thisNode.endpoint.sin_port = htons(portnumber);
-	addNodeToBuckets(thisNode);
 	
-/*	int i;
+	int i;
 	for (i = 0; i < 15; i ++)
 	{
 		underlink_node n;
@@ -93,7 +83,14 @@ int main(int argc, char* argv[])
 		n.endpoint.sin_port = htons(3456);
 		n.routermode = ROUTER;
 		addNodeToBuckets(n);
-	}	*/
+	}
+	
+	thisNode.nodeID = 2396891738327351296LLU;
+	thisNode.endpoint.sin_family = AF_INET;
+	thisNode.routermode = DIRECT_ONLY;
+	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
+	thisNode.endpoint.sin_port = htons(portnumber);
+	addNodeToBuckets(thisNode);
 	
 	printf("My node ID: %llu\n", thisNode.nodeID);
 	
@@ -179,8 +176,6 @@ int main(int argc, char* argv[])
 			memset(&destination, 0, sizeof(char) * 16);
 			memcpy((void*) &source.nodeID + 2, (void*) &src_addr->s6_addr + 2, sizeof(char) * 8);
 			memcpy((void*) &destination.nodeID + 2, (void*) &dst_addr->s6_addr + 2, sizeof(char) * 8);
-			source.nodeID = source.nodeID;
-			destination.nodeID = destination.nodeID;
 			
 			if (source.nodeID != thisNode.nodeID)
 			{
@@ -198,6 +193,8 @@ int main(int argc, char* argv[])
 			
 			long readvalue = read(sockfd, &buffer, MTU);
 			
+			// printf("Remote: %llu, Local: %llu, This Node: %llu\n", message->remoteID, message->localID, thisNode.nodeID);
+			
 			if (message->remoteID == thisNode.nodeID)
 			{
 				if (write(tuntapfd, message->packetbuffer, message->payloadsize) < 0)
@@ -209,7 +206,7 @@ int main(int argc, char* argv[])
 			}
 				else
 			{
-				if (thisNode.routermode == ROUTER)
+				if (thisNode.routermode == ROUTER || message->localID == thisNode.nodeID)
 					sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
 				else
 					fprintf(stderr, "Packet discarded: illegal attempt to route for node %llu\n", message->remoteID);
