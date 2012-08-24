@@ -7,13 +7,23 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
-#include <netinet6/in6_var.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/select.h>
 
 #ifdef __linux__
-	#include <linux/if_tun.h>
+        #include <linux/if_tun.h>
+        #define __IOCTL_OPERATION SIOCAIFADDR
+
+        struct in6_ifreq
+        {
+            struct in6_addr ifr6_addr;
+            uint32_t ifr6_prefixlen;
+            unsigned int ifr6_ifindex;
+        };
+#else
+        #include <netinet6/in6_var.h>
+        #define __IOCTL_OPERATION SIOCAIFADDR_IN6
 #endif
 
 #include "main.h"
@@ -25,13 +35,6 @@ underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
 underlink_node thisNode;
 
 int sockfd, tuntapfd;
-
-/*struct in6_ifreq
-{
-    struct in6_addr ifr6_addr;
-    uint32_t ifr6_prefixlen;
-    unsigned int ifr6_ifindex;
-};*/
 
 int max(int a, int b)
 {
@@ -155,7 +158,7 @@ int main(int argc, char* argv[])
 	if (sockfd6 < 0)
 		perror("socket(AF_INET6)");
 
-	if (ioctl(sockfd6, SIOCAIFADDR_IN6, &addreq6) == -1)
+	if (ioctl(sockfd6, __IOCTL_OPERATION, &addreq6) == -1)
 		perror("SIOCAIFADDR_IN6");
 	
 	while (1)
