@@ -12,8 +12,8 @@ gcc -g 		main.o bucket.o	node.o message.o \
 #exit
 (
 sleep 1;
-ifconfig tun0 inet6 add fdfd:1234:5678:4321::/64 
-ifconfig tun0 up
+#ifconfig tun0 inet6 add fdfd:1234:5678:4321::/64 
+#ifconfig tun0 up
 route add -inet6 fdfd:: -prefixlen 16 -interface tun0
 ) &
 ./underlink

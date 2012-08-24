@@ -7,6 +7,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
+#include <netinet6/in6_var.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/select.h>
@@ -25,12 +26,12 @@ underlink_node thisNode;
 
 int sockfd, tuntapfd;
 
-struct in6_ifreq
+/*struct in6_ifreq
 {
     struct in6_addr ifr6_addr;
     uint32_t ifr6_prefixlen;
     unsigned int ifr6_ifindex;
-};
+};*/
 
 int max(int a, int b)
 {
@@ -134,6 +135,28 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 	#endif
+
+	struct in6_aliasreq addreq6;
+	memset(&addreq6, 0, sizeof(addreq6));
+	sprintf(addreq6.ifra_name, "tun0");
+
+	addreq6.ifra_addr.sin6_family = AF_INET6;
+    addreq6.ifra_addr.sin6_len = sizeof(struct sockaddr_in6);
+    memcpy(&addreq6.ifra_addr.sin6_addr, prefix, sizeof(struct in6_addr));
+
+    addreq6.ifra_prefixmask.sin6_family = AF_INET6;
+    addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
+    memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, sizeof(addreq6.ifra_prefixmask.sin6_addr) / 2);
+    
+    addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
+    addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
+
+	int sockfd6 = socket(AF_INET6, SOCK_DGRAM, 0);
+	if (sockfd6 < 0)
+		perror("socket(AF_INET6)");
+
+	if (ioctl(sockfd6, SIOCAIFADDR_IN6, &addreq6) == -1)
+		perror("SIOCAIFADDR_IN6");
 	
 	while (1)
 	{
