@@ -86,6 +86,7 @@ int main(int argc, char* argv[])
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
 		n.endpoint.sin_port = htons(3456);
 		n.routermode = ROUTER;
+		proto_init(n.crypto);
 		addNodeToBuckets(n);
 	}
 	
