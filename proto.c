@@ -77,7 +77,7 @@ void taia_now(struct taia *t)
 	t->atto++;
 }
 
-int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len)
+static int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len)
 {
 	if (len + noncelength + crypto_box_curve25519xsalsa20poly1305_BOXZEROBYTES > MAX_BUFFER_SIZE)
 	{
@@ -114,7 +114,7 @@ int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, u
 	return len;
 }
 
-int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len)
+static int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len)
 {
 	if (len - crypto_box_curve25519xsalsa20poly1305_ZEROBYTES > MAX_BUFFER_SIZE)
 	{
@@ -158,7 +158,7 @@ int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* output, u
 	return len;
 }
 
-int proto_init(proto_nacl inst)
+static int proto_init(proto_nacl inst)
 {
 	unsigned char taipublickey[crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES];
 	
