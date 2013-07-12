@@ -94,7 +94,6 @@ int main(int argc, char* argv[])
 			(uint64_t) pk[5] << 40 |
 			(uint64_t) pk[6] << 48 |
 			(uint64_t) pk[7] << 56;
-		//n.nodeID = lrand48();
 		n.endpoint.sin_family = AF_INET;
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
 		n.endpoint.sin_port = htons(3456);
@@ -140,10 +139,9 @@ int main(int argc, char* argv[])
 		strcpy(nodename, "/dev/tun0");
 		
 	char prefix[128];
-	short network = htons(0xFDFD);
-	memcpy((void*) &prefix, &network, 2);
-	memcpy((void*) &prefix + 2, (void*) &thisNode.nodeID + 2, ADDR_LEN);
-	memset((void*) &prefix + 8, 0, ADDR_LEN / 2);
+	uint64_t network = htonll(0xFD974C4E9D261F01);
+	memcpy((void*) &prefix, &network, ADDR_LEN);
+	memcpy((void*) &prefix + 8, (void*) &thisNode.nodeID, ADDR_LEN);
 	
 	char presentational[128];
 	inet_ntop(AF_INET6, &prefix, &presentational, 128);
@@ -162,6 +160,12 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 	#endif
+	
+	struct ifreq ifr;
+	ioctl(sockfd, SIOCSIFADDR, &ifr);
+	ioctl(sockfd, SIOCGIFFLAGS, &ifr);
+	ifr.ifr_flags &= ~IFF_MULTICAST;
+	ioctl(tuntapfd, SIOCSIFFLAGS, &ifr);
 
 	struct in6_aliasreq addreq6;
 	memset(&addreq6, 0, sizeof(addreq6));
@@ -173,7 +177,7 @@ int main(int argc, char* argv[])
 
     addreq6.ifra_prefixmask.sin6_family = AF_INET6;
     addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
-    memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, sizeof(addreq6.ifra_prefixmask.sin6_addr) / 2);
+    memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, sizeof(addreq6.ifra_prefixmask.sin6_addr) / 4);
     
     addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
     addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
@@ -192,7 +196,7 @@ int main(int argc, char* argv[])
 		FD_SET(sockfd, &selectlist);
 		
 		int nfds = max(tuntapfd, sockfd);
-		nfds++;
+		nfds ++;
 		
 		int len = select(nfds, &selectlist, NULL, NULL, 0);
 
@@ -218,22 +222,21 @@ int main(int argc, char* argv[])
 			struct in6_addr* src_addr = &headers->ip6_src;
 			struct in6_addr* dst_addr = &headers->ip6_dst;
 			
-			if (dst_addr->s6_addr[0] != 0xFD || dst_addr->s6_addr[1] != 0xFD) continue;
-			if (src_addr->s6_addr[0] != 0xFD || src_addr->s6_addr[1] != 0xFD) continue;
+			if (dst_addr->s6_addr[0] == 0xFF) continue;
+			if (memcmp(&src_addr->s6_addr, &network, sizeof(network)) != 0) continue;
+			if (memcmp(&dst_addr->s6_addr, &network, sizeof(network)) != 0) continue;
 		
 			struct underlink_node source, destination;
-			memset(&source, 0, sizeof(char) * 16);
-			memset(&destination, 0, sizeof(char) * 16);
-			memcpy((void*) &source.nodeID + 2, (void*) &src_addr->s6_addr + 2, sizeof(char) * 8);
-			memcpy((void*) &destination.nodeID + 2, (void*) &dst_addr->s6_addr + 2, sizeof(char) * 8);
+			memcpy((void*) &source.nodeID, (void*) &src_addr->s6_addr + 8, sizeof(char) * 8);
+			memcpy((void*) &destination.nodeID, (void*) &dst_addr->s6_addr + 8, sizeof(char) * 8);
 			
 			if (source.nodeID != thisNode.nodeID)
 			{
-				fprintf(stderr, "Packet discarded: spoofing attempt from %llu (this node: %llu)\n", source.nodeID, thisNode.nodeID);
+				fprintf(stderr, "Packet discarded by filter: invalid source node ID 0x%08llX\n", source.nodeID);
 				continue;
 			}
 							
-			sendIPPacket(buffer, readvalue, source, destination, headers);		
+			sendIPPacket(buffer, readvalue, source, destination, headers);
 		}
 		
 		if (FD_ISSET(sockfd, &selectlist) != 0)
@@ -242,8 +245,6 @@ int main(int argc, char* argv[])
 			struct underlink_message* message = (underlink_message*) &buffer;
 			
 			long readvalue = read(sockfd, &buffer, MTU);
-			
-			// printf("Remote: %llu, Local: %llu, This Node: %llu\n", message->remoteID, message->localID, thisNode.nodeID);
 			
 			if (message->remoteID == thisNode.nodeID)
 			{
@@ -290,7 +291,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 	int sendsize = underlink_message_pack(sendbuffer, msg);
 	
 	if (debug)
-		printf("Sending %lu bytes to node %llu via %llu\n", length, destination.nodeID, closest.nodeID);	
+		printf("Sending %lu bytes to node 0x%08llX via 0x%08llX\n", length, htonll(destination.nodeID), htonll(closest.nodeID));
 
 	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
 	{
