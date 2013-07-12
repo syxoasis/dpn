@@ -35,6 +35,6 @@ void taia_pack(char *s, struct taia *t);
 void taia_unpack(char *s, struct taia *t);
 void taia_now(struct taia *t);
 
-static int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len);
-static int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len);
-static int proto_init(proto_nacl inst);
+int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len);
+int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len);
+int proto_init(proto_nacl inst);
