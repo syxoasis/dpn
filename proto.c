@@ -4,7 +4,36 @@
 #include <sys/time.h>
 
 #include "main.h"
-#include "proto.h"
+#include "include/crypto_box_curve25519xsalsa20poly1305.h"
+#include "include/crypto_scalarmult_curve25519.h"
+
+#define uint64 unsigned long long
+#define noncelength 16
+#define nonceoffset (crypto_box_curve25519xsalsa20poly1305_NONCEBYTES - noncelength)
+
+struct tai
+{
+	uint64 x;
+};
+
+struct taia
+{
+	struct tai sec;
+	unsigned long nano;
+	unsigned long atto;
+};
+
+typedef struct proto_nacl
+{
+	unsigned char privatekey[crypto_box_curve25519xsalsa20poly1305_SECRETKEYBYTES];
+	unsigned char publickey[crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES];
+	unsigned char precomp[crypto_box_curve25519xsalsa20poly1305_BEFORENMBYTES];
+	unsigned char encnonce[crypto_box_curve25519xsalsa20poly1305_NONCEBYTES];
+	unsigned char decnonce[crypto_box_curve25519xsalsa20poly1305_NONCEBYTES];
+	
+	struct taia cdtaip, cdtaie;
+}
+proto_nacl;
 
 void tai_pack(char *s, struct tai *t)
 {
@@ -77,7 +106,7 @@ void taia_now(struct taia *t)
 	t->atto++;
 }
 
-static int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len)
+static int proto_encode(proto_nacl *inst, unsigned char* input, unsigned char* output, unsigned int len)
 {
 	if (len + noncelength + crypto_box_curve25519xsalsa20poly1305_BOXZEROBYTES > MAX_BUFFER_SIZE)
 	{
@@ -92,18 +121,18 @@ static int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* ou
 	
 	len += crypto_box_curve25519xsalsa20poly1305_ZEROBYTES;
 	
-	taia_now(&inst.cdtaie);
-	taia_pack(inst.encnonce + nonceoffset, &(inst.cdtaie));
+	taia_now(&inst->cdtaie);
+	taia_pack(inst->encnonce + nonceoffset, &(inst->cdtaie));
 
 	int result = crypto_box_curve25519xsalsa20poly1305_afternm(
 		output,
 		tempbufferinput,
 		len,
-		inst.encnonce,
-		inst.precomp
+		inst->encnonce,
+		inst->precomp
 	);
 	
-	memcpy(output, inst.encnonce + nonceoffset, noncelength);
+	memcpy(output, inst->encnonce + nonceoffset, noncelength);
 	
 	if (result)
 	{
@@ -114,7 +143,7 @@ static int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* ou
 	return len;
 }
 
-static int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len)
+static int proto_decode(proto_nacl *inst, unsigned char* input, unsigned char* output, unsigned int len)
 {
 	if (len - crypto_box_curve25519xsalsa20poly1305_ZEROBYTES > MAX_BUFFER_SIZE)
 	{
@@ -133,18 +162,18 @@ static int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* ou
 	
 	taia_unpack((char*) input, &cdtaic);
 
-	memcpy(inst.decnonce + nonceoffset, input, noncelength);
+	memcpy(inst->decnonce + nonceoffset, input, noncelength);
 	memset(input, 0, crypto_box_curve25519xsalsa20poly1305_BOXZEROBYTES);
 	
 	int result = crypto_box_curve25519xsalsa20poly1305_open_afternm(
 		tempbufferout,
 		input,
 		len,
-		inst.decnonce,
-		inst.precomp
+		inst->decnonce,
+		inst->precomp
 	);
 	
-	inst.cdtaip = cdtaic;
+	inst->cdtaip = cdtaic;
 	
 	if (result)
 	{
@@ -158,23 +187,24 @@ static int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* ou
 	return len;
 }
 
-static int proto_init(proto_nacl inst)
+static int proto_init(proto_nacl *instance)
 {
+	proto_nacl* inst = ((proto_nacl*) instance);
 	unsigned char taipublickey[crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES];
 	
 	crypto_box_curve25519xsalsa20poly1305_beforenm(
-		inst.precomp,
-		inst.publickey,
-		inst.privatekey
+		inst->precomp,
+		inst->publickey,
+		inst->privatekey
 	);
 	
-	memset(inst.encnonce, 0, crypto_box_curve25519xsalsa20poly1305_NONCEBYTES);
-	memset(inst.decnonce, 0, crypto_box_curve25519xsalsa20poly1305_NONCEBYTES);
+	memset(inst->encnonce, 0, crypto_box_curve25519xsalsa20poly1305_NONCEBYTES);
+	memset(inst->decnonce, 0, crypto_box_curve25519xsalsa20poly1305_NONCEBYTES);
 	
-	crypto_scalarmult_curve25519_base(taipublickey, inst.privatekey);
+	crypto_scalarmult_curve25519_base(taipublickey, inst->privatekey);
 	
-	inst.encnonce[nonceoffset - 1] = memcmp(taipublickey, inst.publickey, crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES) > 0 ? 1 : 0;
-	inst.decnonce[nonceoffset - 1] = inst.encnonce[nonceoffset - 1] ? 0 : 1;
+	inst->encnonce[nonceoffset - 1] = memcmp(taipublickey, inst->publickey, crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES) > 0 ? 1 : 0;
+	inst->decnonce[nonceoffset - 1] = inst->encnonce[nonceoffset - 1] ? 0 : 1;
 	
 	return 0;
 }
