@@ -13,7 +13,6 @@
 
 #ifdef __linux__
         #include <linux/if_tun.h>
-		#include <netinet6/in6_var.h>
         #define __IOCTL_OPERATION SIOCSIFADDR
 
         struct in6_ifreq
@@ -131,7 +130,7 @@ int main(int argc, char* argv[])
 	
 	printf("Interface prefix: ");
 	printNodeIPAddress(stdout, thisNode);
-	printf("/64\n");
+	printf("/8\n");
 
 	#ifdef __linux__	
 		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
@@ -148,7 +147,7 @@ int main(int argc, char* argv[])
 	#endif
 	
 	#ifdef __linux__
-		fprintf(stderr, "Bork! I can't set IP addresses on Linux yet\n");
+		fprintf(stderr, "Please set interface prefix manually using ip -6 addr add\n");
 	#else
 		struct in6_aliasreq addreq6;
 		memset(&addreq6, 0, sizeof(addreq6));
