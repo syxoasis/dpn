@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include "proto.h"
 
 typedef enum underlink_routermode
 {
@@ -14,6 +15,7 @@ typedef struct underlink_node
 	char					publickey[64];
 	int						lastused;
 	underlink_routermode	routermode;
+	proto_nacl				crypto;
 } underlink_node;
 
 typedef struct underlink_nodelist
