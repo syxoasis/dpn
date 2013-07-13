@@ -13,7 +13,7 @@
 
 #ifdef __linux__
         #include <linux/if_tun.h>
-        #define __IOCTL_OPERATION SIOCAIFADDR
+        #define __IOCTL_OPERATION SIOCSIFADDR
 
         struct in6_ifreq
         {
@@ -146,12 +146,6 @@ int main(int argc, char* argv[])
 		}
 	#endif
 	
-	struct ifreq ifr;
-	ioctl(sockfd, SIOCSIFADDR, &ifr);
-	ioctl(sockfd, SIOCGIFFLAGS, &ifr);
-	ifr.ifr_flags &= ~IFF_MULTICAST;
-	ioctl(tuntapfd, SIOCSIFFLAGS, &ifr);
-
 	struct in6_aliasreq addreq6;
 	memset(&addreq6, 0, sizeof(addreq6));
 	sprintf(addreq6.ifra_name, "tun0");
