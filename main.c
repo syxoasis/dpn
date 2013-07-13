@@ -13,6 +13,7 @@
 
 #ifdef __linux__
         #include <linux/if_tun.h>
+		#include <netinet6/in6_var.h>
         #define __IOCTL_OPERATION SIOCSIFADDR
 
         struct in6_ifreq
@@ -146,27 +147,31 @@ int main(int argc, char* argv[])
 		}
 	#endif
 	
-	struct in6_aliasreq addreq6;
-	memset(&addreq6, 0, sizeof(addreq6));
-	sprintf(addreq6.ifra_name, "tun0");
+	#ifdef __linux__
+		fprintf(stderr, "Bork! I can't set IP addresses on Linux yet\n");
+	#else
+		struct in6_aliasreq addreq6;
+		memset(&addreq6, 0, sizeof(addreq6));
+		sprintf(addreq6.ifra_name, "tun0");
 
-	addreq6.ifra_addr.sin6_family = AF_INET6;
-    addreq6.ifra_addr.sin6_len = sizeof(struct sockaddr_in6);
-    memcpy(&addreq6.ifra_addr.sin6_addr, prefix, sizeof(struct in6_addr));
+		addreq6.ifra_addr.sin6_family = AF_INET6;
+		addreq6.ifra_addr.sin6_len = sizeof(struct sockaddr_in6);
+		memcpy(&addreq6.ifra_addr.sin6_addr, prefix, sizeof(struct in6_addr));
 
-    addreq6.ifra_prefixmask.sin6_family = AF_INET6;
-    addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
-    memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, 1);
+		addreq6.ifra_prefixmask.sin6_family = AF_INET6;
+		addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
+		memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, 1);
     
-    addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
-    addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
+		addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
+		addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
 
-	int sockfd6 = socket(AF_INET6, SOCK_DGRAM, 0);
-	if (sockfd6 < 0)
-		perror("socket(AF_INET6)");
+		int sockfd6 = socket(AF_INET6, SOCK_DGRAM, 0);
+		if (sockfd6 < 0)
+			perror("socket(AF_INET6)");
 
-	if (ioctl(sockfd6, __IOCTL_OPERATION, &addreq6) == -1)
-		perror("SIOCAIFADDR_IN6");
+		if (ioctl(sockfd6, __IOCTL_OPERATION, &addreq6) == -1)
+			perror("SIOCAIFADDR_IN6");
+	#endif
 	
 	while (1)
 	{
