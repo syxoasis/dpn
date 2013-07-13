@@ -130,7 +130,7 @@ void underlink_message_dump(underlink_message* packet)
 			char addr[64];
 			inet_ntop(AF_INET, &node->endpoint.sin_addr, addr, 64);
 			
-			printf("\tNode %i: %s (%s:%i)\n", i + 1, node->key, addr,
+			printf("\tNode %i: %s (%s:%i)\n", i + 1, node->nodeID, addr,
 					ntohs(node->endpoint.sin_port));
 		}
 		else

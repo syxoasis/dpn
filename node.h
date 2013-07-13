@@ -1,3 +1,5 @@
+#pragma once
+
 #include <netinet/in.h>
 #include "proto.h"
 #include "key.h"
@@ -9,9 +11,12 @@ typedef enum underlink_routermode
 }
 underlink_routermode;
 
+typedef char underlink_nodeID[32];
+
 typedef struct underlink_node
 {
-	underlink_pubkey		key;
+	underlink_nodeID		nodeID;
+	underlink_pubkey		publickey;
 	struct sockaddr_in		endpoint;
 	int						lastused;
 	underlink_routermode	routermode;

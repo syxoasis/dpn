@@ -7,7 +7,7 @@
 #include "main.h"
 
 extern underlink_node thisNode;
-extern underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
+extern underlink_node buckets[sizeof(underlink_nodeID)][NODES_PER_BUCKET];
 
 void printbits(unsigned long long b, int n)
 {
@@ -31,15 +31,15 @@ int getBucketID(underlink_node check)
 	uint64_t bits = ~0ULL >> 16;
 
 	int i;
-	for (i = ADDR_LEN; i > 0; i --)
+	for (i = sizeof(underlink_nodeID); i > 0; i --)
 	{
-		if ((check.key[i] & bits) == (thisNode.key[i] & bits))
-			return ADDR_LEN - i;
+		if ((check.nodeID[i] & bits) == (thisNode.nodeID[i] & bits))
+			return sizeof(underlink_nodeID) - i;
 		
 		bits <<= 1;
 	}
 
-	return ADDR_LEN;
+	return sizeof(underlink_nodeID);
 }
 
 /*	
@@ -70,15 +70,15 @@ int keyComparator(const void* a, const void* b)
 underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, underlink_routermode routermode)
 {
 	int startBucket = getBucketID(check);	
-	if (startBucket == 0 || thisNode.key == check.key)
+	if (startBucket == 0 || thisNode.nodeID == check.nodeID)
 		return thisNode;
 		
 	int lastdist = 0;
 	underlink_node returnnode;
-	memset(returnnode.key, 0, sizeof(underlink_pubkey));
+	memset(returnnode.nodeID, 0, sizeof(underlink_pubkey));
 
 	int b;
-	for (b = ADDR_LEN; b > 0; b --)
+	for (b = sizeof(underlink_nodeID); b > 0; b --)
 	{
 		// this is not efficient
 		underlink_node nodes[NODES_PER_BUCKET];
@@ -88,7 +88,7 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, und
 		int n;
 		for (n = steps; n < NODES_PER_BUCKET; n ++)
 		{			
-			if (nodes[n].key == 0 || &nodes[n] == 0)
+			if (nodes[n].nodeID == 0 || &nodes[n] == 0)
 				continue;
 				
 			if (nodes[n].routermode != routermode)
@@ -119,14 +119,14 @@ int addNodeToBuckets(underlink_node newnode)
 	int n;
 	for (n = 0; n < NODES_PER_BUCKET; n ++)
 	{
-		if (buckets[b][n].key == 0)
+		if (buckets[b][n].nodeID == 0)
 		{
 			memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
 			
 			//if (debug)
 			//	printf("Inserted %s node 0x%08llX into bucket %i (pos %i)\n",
 			//				newnode.routermode == ROUTER ? "router" : "direct-only",
-			//				ntohll(newnode.key), b, n);
+			//				ntohll(newnode.nodeID), b, n);
 			return b;
 		}
 	}
@@ -145,7 +145,7 @@ int addNodeToBuckets(underlink_node newnode)
 	
 	//if (debug)
 	//	printf("Replacing node 0x%08llX (pos %i), with 0x%08llX in bucket %i\n",
-	//			ntohll(buckets[b][i].key), i, ntohll(newnode.key), b);
+	//			ntohll(buckets[b][i].nodeID), i, ntohll(newnode.nodeID), b);
 				
 	memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
 	

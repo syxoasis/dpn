@@ -30,8 +30,9 @@
 #include "node.h"
 #include "bucket.h"
 #include "message.h"
+#include "proto.h"
 
-underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
+underlink_node buckets[sizeof(underlink_nodeID)][NODES_PER_BUCKET];
 underlink_node thisNode;
 
 int sockfd, tuntapfd;
@@ -51,7 +52,7 @@ int main(int argc, char* argv[])
 	char nodename[16];
 	fd_set selectlist;
 	
-	memset(&buckets, 0, sizeof(underlink_node) * ADDR_LEN * NODES_PER_BUCKET);
+	memset(&buckets, 0, sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET);
 	memset(&thisNode, 0, sizeof(underlink_node));
 	
 	while ((opt = getopt(argc, argv, "p:")) != -1)
@@ -72,10 +73,10 @@ int main(int argc, char* argv[])
 	if (debug)
 	{
 		printf("Using UDP port %i\n", portnumber);
-		printf("Maximum peer count: %i\n", ADDR_LEN * NODES_PER_BUCKET);
-		printf("%i-bit peer address space\n", ADDR_LEN);
+		printf("Maximum peer count: %lu\n", sizeof(underlink_nodeID) * NODES_PER_BUCKET);
+		printf("%lu-bit peer address space\n", sizeof(underlink_nodeID));
 		printf("Bucket table size in memory: %lukb\n",
-			(sizeof(underlink_node) * ADDR_LEN * NODES_PER_BUCKET) / 24);
+			(sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET) / 24);
 	}
 
 	srand(time(NULL));
@@ -87,7 +88,7 @@ int main(int argc, char* argv[])
 		underlink_pubkey pk;
 		underlink_seckey sk;
 		
-		key_generate(pk, sk);
+		generateKey(&pk, &sk);
 		n.endpoint.sin_family = AF_INET;
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
 		n.endpoint.sin_port = htons(3456);
@@ -96,14 +97,14 @@ int main(int argc, char* argv[])
 		addNodeToBuckets(n);
 	}
 	
-	crypto_box_curve25519xsalsa20poly1305_keypair(localPublicKey, localSecretKey);
+	generateKey(&localPublicKey, &localSecretKey);
+	getNodeIDFromKey(&thisNode.nodeID, localPublicKey);
+	
 	thisNode.endpoint.sin_family = AF_INET;
-	thisNode.routermode = DIRECT_ONLY;
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
+	thisNode.routermode = DIRECT_ONLY;
 	thisNode.endpoint.sin_port = htons(portnumber);
 	addNodeToBuckets(thisNode);
-	
-	//printf("My Node ID: 0x%08llX\n", thisNode.key);
 	
 	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	
@@ -123,12 +124,11 @@ int main(int argc, char* argv[])
 		strcpy(nodename, "/dev/tun0");
 		
 	char prefix[128];
-	uint64_t network = htonll(0xFD974C4E9D261F01);
-	memcpy((void*) &prefix, &network, ADDR_LEN);
-	memcpy((void*) &prefix + 8, (void*) &thisNode.key, ADDR_LEN);
+	memcpy((void*) &prefix, (void*) &thisNode.nodeID, sizeof(underlink_nodeID));
 	
 	char presentational[128];
-	inet_ntop(AF_INET6, &prefix, &presentational, 128);
+	memset(&presentational, 0, 128);
+	inet_ntop(AF_INET6, &thisNode.nodeID, &presentational, 128);
 	printf("Interface prefix: %s/64\n", presentational);
 
 	#ifdef __linux__	
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
 
     addreq6.ifra_prefixmask.sin6_family = AF_INET6;
     addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
-    memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, sizeof(addreq6.ifra_prefixmask.sin6_addr) / 4);
+    memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, 1);
     
     addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
     addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
@@ -207,16 +207,16 @@ int main(int argc, char* argv[])
 			struct in6_addr* dst_addr = &headers->ip6_dst;
 			
 			if (dst_addr->s6_addr[0] == 0xFF) continue;
-			if (memcmp(&src_addr->s6_addr, &network, sizeof(network)) != 0) continue;
-			if (memcmp(&dst_addr->s6_addr, &network, sizeof(network)) != 0) continue;
+			//if (memcmp(&src_addr->s6_addr, &network, sizeof(network)) != 0) continue;
+			//if (memcmp(&dst_addr->s6_addr, &network, sizeof(network)) != 0) continue;
 		
 			struct underlink_node source, destination;
-			memcpy((void*) &source.key, (void*) &src_addr->s6_addr + 8, sizeof(char) * 8);
-			memcpy((void*) &destination.key, (void*) &dst_addr->s6_addr + 8, sizeof(char) * 8);
+			memcpy((void*) &source.nodeID, (void*) &src_addr->s6_addr + 8, sizeof(char) * 8);
+			memcpy((void*) &destination.nodeID, (void*) &dst_addr->s6_addr + 8, sizeof(char) * 8);
 			
-			if (source.key != thisNode.key)
+			if (source.nodeID != thisNode.nodeID)
 			{
-			//	fprintf(stderr, "Packet discarded by filter: invalid source node ID 0x%08llX\n", source.key);
+			//	fprintf(stderr, "Packet discarded by filter: invalid source node ID 0x%08llX\n", source.nodeID);
 				continue;
 			}
 							
@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
 			
 			long readvalue = read(sockfd, &buffer, MTU);
 			
-			if (message->remoteID == thisNode.key)
+			if (memcmp(message->remoteID, thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
 			{
 				if (write(tuntapfd, message->packetbuffer, message->payloadsize) < 0)
 				{
@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
 			}
 				else
 			{
-				if (thisNode.routermode == ROUTER || message->localID == thisNode.key)
+				if (thisNode.routermode == ROUTER || memcmp(message->remoteID, thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
 					sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
 				//else
 				//	fprintf(stderr, "Packet discarded: illegal attempt to route for node %llu\n", message->remoteID);
@@ -257,29 +257,29 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 
 	closest = getClosestAddressFromBuckets(destination, 0, ROUTER);
 
-	if (closest.key == 0)
+	if (closest.nodeID == 0)
 	{
-		//fprintf(stderr, "Remote node %llu is not accessible; no intermediate router known\n", destination.key);
+		//fprintf(stderr, "Remote node %llu is not accessible; no intermediate router known\n", destination.nodeID);
 		return -1;
 	}
 
 	if (closest.endpoint.sin_addr.s_addr == 0)
 	{
-		//fprintf(stderr, "Packet discarded: node %llu has no remote endpoint\n", closest.key);
+		//fprintf(stderr, "Packet discarded: node %llu has no remote endpoint\n", closest.nodeID);
 		return -1;
 	}
 		
-	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.key, closest.key, length);
+	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.nodeID, closest.nodeID, length);
 	char* sendbuffer = calloc(1, MTU);
 	memcpy(&msg->packetbuffer, &buffer, length);
 	int sendsize = underlink_message_pack(sendbuffer, msg);
 	
 	//if (debug)
-	//	printf("Sending %lu bytes to node 0x%08llX via 0x%08llX\n", length, htonll(destination.key), htonll(closest.key));
+	//	printf("Sending %lu bytes to node 0x%08llX via 0x%08llX\n", length, htonll(destination.nodeID), htonll(closest.nodeID));
 
 	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
 	{
-		//fprintf(stderr, "Socket error when attempting to send to %llu: ", closest.key);
+		//fprintf(stderr, "Socket error when attempting to send to %llu: ", closest.nodeID);
 		perror("sendto");
 		//fprintf(stderr, "\n");
 	}

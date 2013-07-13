@@ -1,3 +1,5 @@
+#pragma once
+
 typedef enum underlink_messagetype
 {
 	KEYPAIR,
