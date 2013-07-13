@@ -30,6 +30,7 @@
 #include "node.h"
 #include "bucket.h"
 #include "message.h"
+#include "crypto.h"
 
 underlink_node buckets[ADDR_LEN][NODES_PER_BUCKET];
 underlink_node thisNode;
@@ -88,6 +89,10 @@ int main(int argc, char* argv[])
 		n.routermode = ROUTER;
 		addNodeToBuckets(n);
 	}
+	
+	unsigned char myKey[32];
+	generateNewKey(myKey);
+	
 	
 	thisNode.nodeID = 2396891738327351296LLU;
 	thisNode.endpoint.sin_family = AF_INET;
