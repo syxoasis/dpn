@@ -7,7 +7,8 @@
 typedef enum underlink_routermode
 {
 	DIRECT_ONLY, 
-	ROUTER 
+	ROUTER,
+	ORCHESTRATOR
 }
 underlink_routermode;
 

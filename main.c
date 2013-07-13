@@ -55,20 +55,45 @@ int main(int argc, char* argv[])
 	memset(&buckets, 0, sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET);
 	memset(&thisNode, 0, sizeof(underlink_node));
 	
-	while ((opt = getopt(argc, argv, "p:")) != -1)
+	generateKey(&localPublicKey, &localSecretKey);
+	getNodeIDFromKey(&thisNode.nodeID, localPublicKey);
+	
+	thisNode.endpoint.sin_family = AF_INET;
+	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
+	thisNode.routermode = DIRECT_ONLY;
+	thisNode.endpoint.sin_port = htons(portnumber);
+	
+	while ((opt = getopt(argc, argv, "p:odr")) != -1)
 	{
 		switch (opt)
 		{
 			case 'p':
 				if (atoi(optarg) <= 65535)
+				{
 					portnumber = atoi(optarg);
+					thisNode.endpoint.sin_port = htons(portnumber);
+				}
+				break;
+				
+			case 'o':
+				thisNode.routermode = ORCHESTRATOR;
+				break;
+				
+			case 'd':
+				thisNode.routermode = DIRECT_ONLY;
+				break;
+				
+			case 'r':
+				thisNode.routermode = ROUTER;
 				break;
 				
 			default:
-				fprintf(stderr, "Usage: %s [-p port]\n", argv[0]);
+				fprintf(stderr, "Usage: %s [-p port] [-o] [-d] [-r]\n", argv[0]);
 				exit(EXIT_FAILURE);
 		}
 	}
+	
+	addNodeToBuckets(thisNode);
 	
 	if (debug)
 	{
@@ -79,6 +104,15 @@ int main(int argc, char* argv[])
 			(sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET) / 24);
 	}
 
+	switch (thisNode.routermode)
+	{
+		case DIRECT_ONLY:	printf("Operating in direct-only mode (TUN enabled)\n"); break;
+		case ORCHESTRATOR:	printf("Operating in orchestrator mode (TUN disabled)\n"); break;
+		case ROUTER:
+		default:
+			printf("Operating in router mode (TUN enabled)\n"); break;
+	}
+	
 	srand(time(NULL));
 	
 	int i;
@@ -98,15 +132,6 @@ int main(int argc, char* argv[])
 		proto_init(n.crypto);
 		addNodeToBuckets(n);
 	}
-	
-	generateKey(&localPublicKey, &localSecretKey);
-	getNodeIDFromKey(&thisNode.nodeID, localPublicKey);
-	
-	thisNode.endpoint.sin_family = AF_INET;
-	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
-	thisNode.routermode = DIRECT_ONLY;
-	thisNode.endpoint.sin_port = htons(portnumber);
-	addNodeToBuckets(thisNode);
 	
 	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	
@@ -132,53 +157,61 @@ int main(int argc, char* argv[])
 	printNodeIPAddress(stdout, thisNode);
 	printf("/8\n");
 
-	#ifdef __linux__	
-		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
-		{
-			fprintf(stderr, "Unable to find /dev/net/tun\n");
-			return -1;
-		}
-	#else
-		if ((tuntapfd = open(nodename, O_RDWR)) < 0)
-		{
-			fprintf(stderr, "Unable to open tuntap device '%s'\n", nodename);
-			return -1;
-		}
-	#endif
-	
-	#ifdef __linux__
-		fprintf(stderr, "Please set interface prefix manually using ip -6 addr add\n");
-	#else
-		struct in6_aliasreq addreq6;
-		memset(&addreq6, 0, sizeof(addreq6));
-		sprintf(addreq6.ifra_name, "tun0");
+	if (thisNode.routermode != ORCHESTRATOR)
+	{
+		#ifdef __linux__
+			if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
+			{
+				fprintf(stderr, "Unable to find /dev/net/tun\n");
+				return -1;
+			}
+		#else
+			if ((tuntapfd = open(nodename, O_RDWR)) < 0)
+			{
+				fprintf(stderr, "Unable to open tuntap device '%s'\n", nodename);
+				return -1;
+			}
+		#endif
+		
+		#ifdef __linux__
+			fprintf(stderr, "Please set interface prefix manually using ip -6 addr add\n");
+		#else
+			struct in6_aliasreq addreq6;
+			memset(&addreq6, 0, sizeof(addreq6));
+			sprintf(addreq6.ifra_name, "tun0");
 
-		addreq6.ifra_addr.sin6_family = AF_INET6;
-		addreq6.ifra_addr.sin6_len = sizeof(struct sockaddr_in6);
-		memcpy(&addreq6.ifra_addr.sin6_addr, prefix, sizeof(struct in6_addr));
+			addreq6.ifra_addr.sin6_family = AF_INET6;
+			addreq6.ifra_addr.sin6_len = sizeof(struct sockaddr_in6);
+			memcpy(&addreq6.ifra_addr.sin6_addr, prefix, sizeof(struct in6_addr));
 
-		addreq6.ifra_prefixmask.sin6_family = AF_INET6;
-		addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
-		memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, 1);
-    
-		addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
-		addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
+			addreq6.ifra_prefixmask.sin6_family = AF_INET6;
+			addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
+			memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, 1);
+		
+			addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
+			addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
 
-		int sockfd6 = socket(AF_INET6, SOCK_DGRAM, 0);
-		if (sockfd6 < 0)
-			perror("socket(AF_INET6)");
+			int sockfd6 = socket(AF_INET6, SOCK_DGRAM, 0);
+			if (sockfd6 < 0)
+				perror("socket(AF_INET6)");
 
-		if (ioctl(sockfd6, __IOCTL_OPERATION, &addreq6) == -1)
-			perror("SIOCAIFADDR_IN6");
-	#endif
+			if (ioctl(sockfd6, __IOCTL_OPERATION, &addreq6) == -1)
+				perror("SIOCAIFADDR_IN6");
+		#endif
+	}
 	
 	while (1)
 	{
 		FD_ZERO(&selectlist);
-		FD_SET(tuntapfd, &selectlist);
+		if (thisNode.routermode != ORCHESTRATOR)
+			FD_SET(tuntapfd, &selectlist);
 		FD_SET(sockfd, &selectlist);
 		
-		int nfds = max(tuntapfd, sockfd);
+		int nfds;
+		if (thisNode.routermode != ORCHESTRATOR)
+			nfds = max(tuntapfd, sockfd);
+		else
+			nfds = sockfd;
 		nfds ++;
 		
 		int len = select(nfds, &selectlist, NULL, NULL, 0);
