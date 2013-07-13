@@ -89,6 +89,8 @@ int main(int argc, char* argv[])
 		underlink_seckey sk;
 		
 		generateKey(&pk, &sk);
+		getNodeIDFromKey(&n.nodeID, pk);
+		
 		n.endpoint.sin_family = AF_INET;
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
 		n.endpoint.sin_port = htons(3456);
@@ -126,10 +128,9 @@ int main(int argc, char* argv[])
 	char prefix[128];
 	memcpy((void*) &prefix, (void*) &thisNode.nodeID, sizeof(underlink_nodeID));
 	
-	char presentational[128];
-	memset(&presentational, 0, 128);
-	inet_ntop(AF_INET6, &thisNode.nodeID, &presentational, 128);
-	printf("Interface prefix: %s/64\n", presentational);
+	printf("Interface prefix: ");
+	printNodeIPAddress(thisNode);
+	printf("/64\n");
 
 	#ifdef __linux__	
 		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)

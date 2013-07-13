@@ -119,14 +119,17 @@ int addNodeToBuckets(underlink_node newnode)
 	int n;
 	for (n = 0; n < NODES_PER_BUCKET; n ++)
 	{
-		if (buckets[b][n].nodeID == 0)
+		if (buckets[b][n].nodeID[0] == 0)
 		{
 			memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
 			
-			//if (debug)
-			//	printf("Inserted %s node 0x%08llX into bucket %i (pos %i)\n",
-			//				newnode.routermode == ROUTER ? "router" : "direct-only",
-			//				ntohll(newnode.nodeID), b, n);
+			if (debug)
+			{
+				printf("Inserted %s node ", newnode.routermode == ROUTER ? "router" : "direct-only");
+				printNodeIPAddress(newnode);
+				printf(" into bucket %i (pos %i)\n", b, n);
+			}
+			
 			return b;
 		}
 	}
