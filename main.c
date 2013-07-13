@@ -36,6 +36,9 @@ underlink_node thisNode;
 
 int sockfd, tuntapfd;
 
+underlink_pubkey localPublicKey;
+underlink_seckey localSecretKey;
+
 int max(int a, int b)
 {
 	return a > b ? a : b;
@@ -77,23 +80,14 @@ int main(int argc, char* argv[])
 
 	srand(time(NULL));
 	
-	unsigned char pk[crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES];
-	unsigned char sk[crypto_box_curve25519xsalsa20poly1305_SECRETKEYBYTES];
-	
 	int i;
 	for (i = 0; i < 15; i ++)
 	{
 		underlink_node n;
-		crypto_box_curve25519xsalsa20poly1305_keypair(pk, sk);
-		n.nodeID =
-			(uint64_t) pk[0] |
-			(uint64_t) pk[1] << 8 |
-			(uint64_t) pk[2] << 16 |
-			(uint64_t) pk[3] << 24 |
-			(uint64_t) pk[4] << 32 |
-			(uint64_t) pk[5] << 40 |
-			(uint64_t) pk[6] << 48 |
-			(uint64_t) pk[7] << 56;
+		underlink_pubkey pk;
+		underlink_seckey sk;
+		
+		key_generate(pk, sk);
 		n.endpoint.sin_family = AF_INET;
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
 		n.endpoint.sin_port = htons(3456);
@@ -102,24 +96,14 @@ int main(int argc, char* argv[])
 		addNodeToBuckets(n);
 	}
 	
-	crypto_box_curve25519xsalsa20poly1305_keypair(pk, sk);
-	thisNode.nodeID =
-		(uint64_t) pk[0] |
-		(uint64_t) pk[1] << 8 |
-		(uint64_t) pk[2] << 16 |
-		(uint64_t) pk[3] << 24 |
-		(uint64_t) pk[4] << 32 |
-		(uint64_t) pk[5] << 40 |
-		(uint64_t) pk[6] << 48 |
-		(uint64_t) pk[7] << 56;
-	
+	crypto_box_curve25519xsalsa20poly1305_keypair(localPublicKey, localSecretKey);
 	thisNode.endpoint.sin_family = AF_INET;
 	thisNode.routermode = DIRECT_ONLY;
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
 	thisNode.endpoint.sin_port = htons(portnumber);
 	addNodeToBuckets(thisNode);
 	
-	printf("My Node ID: 0x%08llX\n", ntohll(thisNode.nodeID));
+	//printf("My Node ID: 0x%08llX\n", thisNode.key);
 	
 	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	
@@ -141,7 +125,7 @@ int main(int argc, char* argv[])
 	char prefix[128];
 	uint64_t network = htonll(0xFD974C4E9D261F01);
 	memcpy((void*) &prefix, &network, ADDR_LEN);
-	memcpy((void*) &prefix + 8, (void*) &thisNode.nodeID, ADDR_LEN);
+	memcpy((void*) &prefix + 8, (void*) &thisNode.key, ADDR_LEN);
 	
 	char presentational[128];
 	inet_ntop(AF_INET6, &prefix, &presentational, 128);
@@ -227,12 +211,12 @@ int main(int argc, char* argv[])
 			if (memcmp(&dst_addr->s6_addr, &network, sizeof(network)) != 0) continue;
 		
 			struct underlink_node source, destination;
-			memcpy((void*) &source.nodeID, (void*) &src_addr->s6_addr + 8, sizeof(char) * 8);
-			memcpy((void*) &destination.nodeID, (void*) &dst_addr->s6_addr + 8, sizeof(char) * 8);
+			memcpy((void*) &source.key, (void*) &src_addr->s6_addr + 8, sizeof(char) * 8);
+			memcpy((void*) &destination.key, (void*) &dst_addr->s6_addr + 8, sizeof(char) * 8);
 			
-			if (source.nodeID != thisNode.nodeID)
+			if (source.key != thisNode.key)
 			{
-				fprintf(stderr, "Packet discarded by filter: invalid source node ID 0x%08llX\n", source.nodeID);
+			//	fprintf(stderr, "Packet discarded by filter: invalid source node ID 0x%08llX\n", source.key);
 				continue;
 			}
 							
@@ -246,7 +230,7 @@ int main(int argc, char* argv[])
 			
 			long readvalue = read(sockfd, &buffer, MTU);
 			
-			if (message->remoteID == thisNode.nodeID)
+			if (message->remoteID == thisNode.key)
 			{
 				if (write(tuntapfd, message->packetbuffer, message->payloadsize) < 0)
 				{
@@ -257,10 +241,10 @@ int main(int argc, char* argv[])
 			}
 				else
 			{
-				if (thisNode.routermode == ROUTER || message->localID == thisNode.nodeID)
+				if (thisNode.routermode == ROUTER || message->localID == thisNode.key)
 					sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
-				else
-					fprintf(stderr, "Packet discarded: illegal attempt to route for node %llu\n", message->remoteID);
+				//else
+				//	fprintf(stderr, "Packet discarded: illegal attempt to route for node %llu\n", message->remoteID);
 			}
 		}
 	}
@@ -273,31 +257,31 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 
 	closest = getClosestAddressFromBuckets(destination, 0, ROUTER);
 
-	if (closest.nodeID == 0)
+	if (closest.key == 0)
 	{
-		fprintf(stderr, "Remote node %llu is not accessible; no intermediate router known\n", destination.nodeID);
+		//fprintf(stderr, "Remote node %llu is not accessible; no intermediate router known\n", destination.key);
 		return -1;
 	}
 
 	if (closest.endpoint.sin_addr.s_addr == 0)
 	{
-		fprintf(stderr, "Packet discarded: node %llu has no remote endpoint\n", closest.nodeID);
+		//fprintf(stderr, "Packet discarded: node %llu has no remote endpoint\n", closest.key);
 		return -1;
 	}
 		
-	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.nodeID, closest.nodeID, length);
+	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.key, closest.key, length);
 	char* sendbuffer = calloc(1, MTU);
 	memcpy(&msg->packetbuffer, &buffer, length);
 	int sendsize = underlink_message_pack(sendbuffer, msg);
 	
-	if (debug)
-		printf("Sending %lu bytes to node 0x%08llX via 0x%08llX\n", length, htonll(destination.nodeID), htonll(closest.nodeID));
+	//if (debug)
+	//	printf("Sending %lu bytes to node 0x%08llX via 0x%08llX\n", length, htonll(destination.key), htonll(closest.key));
 
 	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
 	{
-		fprintf(stderr, "Socket error when attempting to send to %llu: ", closest.nodeID);
+		//fprintf(stderr, "Socket error when attempting to send to %llu: ", closest.key);
 		perror("sendto");
-		fprintf(stderr, "\n");
+		//fprintf(stderr, "\n");
 	}
 	
 	free(sendbuffer);

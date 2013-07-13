@@ -9,5 +9,6 @@
  */
 uint64_t getDistance(underlink_node one, underlink_node two)
 {
-	return one.nodeID ^ two.nodeID;
+//	return one.key ^ two.key;
+	return 0;
 }

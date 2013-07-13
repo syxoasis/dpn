@@ -6,7 +6,7 @@
 #include "message.h"
 
 underlink_message* underlink_message_construct(underlink_messagetype messagetype,
-		uint64_t localID, uint64_t remoteID, int payloadsize)
+		underlink_pubkey localID, underlink_pubkey remoteID, int payloadsize)
 {	
 	int payloadbytes;
 	if (messagetype == KEYPAIR)
@@ -17,8 +17,8 @@ underlink_message* underlink_message_construct(underlink_messagetype messagetype
 	underlink_message* out = calloc(1, sizeof(underlink_message) + payloadbytes);
 
 	out->message = messagetype;
-	out->localID = localID;
-	out->remoteID = remoteID;
+	memcpy(out->localID, localID, sizeof(underlink_pubkey));
+	memcpy(out->remoteID, remoteID, sizeof(underlink_pubkey));
 	
 	if (messagetype == KEYPAIR)
 		out->payloadsize = 0;
@@ -95,7 +95,7 @@ int underlink_message_unpack(underlink_message* out, void* buffer, int buffersiz
 void underlink_message_dump(underlink_message* packet)
 {
 	printf("Message ID: 0x%X, payload size: %i\n", packet->message, packet->payloadsize);
-	printf("\tLocal %llu -> Remote %llu\n", packet->localID, packet->remoteID);
+	//printf("\tLocal %llu -> Remote %llu\n", packet->localID, packet->remoteID);
 
 	underlink_nodelist* kp;
 	if (&packet->nodes == 0)
@@ -130,7 +130,7 @@ void underlink_message_dump(underlink_message* packet)
 			char addr[64];
 			inet_ntop(AF_INET, &node->endpoint.sin_addr, addr, 64);
 			
-			printf("\tNode %i: %llu (%s:%i)\n", i + 1, node->nodeID, addr,
+			printf("\tNode %i: %s (%s:%i)\n", i + 1, node->key, addr,
 					ntohs(node->endpoint.sin_port));
 		}
 		else
