@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "main.h"
 #include "node.h"
 
@@ -15,10 +16,10 @@ uint64_t getDistance(underlink_node one, underlink_node two)
 	return 3;
 }
 
-void printNodeIPAddress(underlink_node node)
+void printNodeIPAddress(FILE* pipe, underlink_node node)
 {
-	char presentational[128];
+	char presentational[164];
 	memset(&presentational, 0, 128);
 	inet_ntop(AF_INET6, &node.nodeID, &presentational, 128);
-	printf("%s", presentational);
+	fprintf(pipe, "%s", presentational);
 }

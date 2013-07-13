@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
 	memcpy((void*) &prefix, (void*) &thisNode.nodeID, sizeof(underlink_nodeID));
 	
 	printf("Interface prefix: ");
-	printNodeIPAddress(thisNode);
+	printNodeIPAddress(stdout, thisNode);
 	printf("/64\n");
 
 	#ifdef __linux__	
@@ -207,17 +207,20 @@ int main(int argc, char* argv[])
 			struct in6_addr* src_addr = &headers->ip6_src;
 			struct in6_addr* dst_addr = &headers->ip6_dst;
 			
-			if (dst_addr->s6_addr[0] == 0xFF) continue;
-			//if (memcmp(&src_addr->s6_addr, &network, sizeof(network)) != 0) continue;
-			//if (memcmp(&dst_addr->s6_addr, &network, sizeof(network)) != 0) continue;
+			if (dst_addr->s6_addr[0] == 0xFD) continue;
 		
 			struct underlink_node source, destination;
-			memcpy((void*) &source.nodeID, (void*) &src_addr->s6_addr + 8, sizeof(char) * 8);
-			memcpy((void*) &destination.nodeID, (void*) &dst_addr->s6_addr + 8, sizeof(char) * 8);
+			memcpy((void*) &source.nodeID, (void*) &src_addr->s6_addr, sizeof(underlink_nodeID));
+			memcpy((void*) &destination.nodeID, (void*) &dst_addr->s6_addr, sizeof(underlink_nodeID));
 			
-			if (source.nodeID != thisNode.nodeID)
+			if (memcmp(&src_addr->s6_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
 			{
-			//	fprintf(stderr, "Packet discarded by filter: invalid source node ID 0x%08llX\n", source.nodeID);
+				if (debug)
+				{
+					fprintf(stderr, "Packet discarded by filter: invalid source ");
+					printNodeIPAddress(stderr, source);
+					fprintf(stderr, "\n");
+				}
 				continue;
 			}
 							
