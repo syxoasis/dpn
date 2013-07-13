@@ -77,11 +77,24 @@ int main(int argc, char* argv[])
 
 	srand(time(NULL));
 	
+	unsigned char pk[crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES];
+	unsigned char sk[crypto_box_curve25519xsalsa20poly1305_SECRETKEYBYTES];
+	
 	int i;
 	for (i = 0; i < 15; i ++)
 	{
 		underlink_node n;
-		n.nodeID = lrand48();
+		crypto_box_curve25519xsalsa20poly1305_keypair(pk, sk);
+		n.nodeID =
+			(uint64_t) pk[0] |
+			(uint64_t) pk[1] << 8 |
+			(uint64_t) pk[2] << 16 |
+			(uint64_t) pk[3] << 24 |
+			(uint64_t) pk[4] << 32 |
+			(uint64_t) pk[5] << 40 |
+			(uint64_t) pk[6] << 48 |
+			(uint64_t) pk[7] << 56;
+		//n.nodeID = lrand48();
 		n.endpoint.sin_family = AF_INET;
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
 		n.endpoint.sin_port = htons(3456);
@@ -90,14 +103,24 @@ int main(int argc, char* argv[])
 		addNodeToBuckets(n);
 	}
 	
-	thisNode.nodeID = 2396891738327351296LLU;
+	crypto_box_curve25519xsalsa20poly1305_keypair(pk, sk);
+	thisNode.nodeID =
+		(uint64_t) pk[0] |
+		(uint64_t) pk[1] << 8 |
+		(uint64_t) pk[2] << 16 |
+		(uint64_t) pk[3] << 24 |
+		(uint64_t) pk[4] << 32 |
+		(uint64_t) pk[5] << 40 |
+		(uint64_t) pk[6] << 48 |
+		(uint64_t) pk[7] << 56;
+	
 	thisNode.endpoint.sin_family = AF_INET;
 	thisNode.routermode = DIRECT_ONLY;
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
 	thisNode.endpoint.sin_port = htons(portnumber);
 	addNodeToBuckets(thisNode);
 	
-	printf("My node ID: %llu\n", thisNode.nodeID);
+	printf("My Node ID: 0x%08llX\n", ntohll(thisNode.nodeID));
 	
 	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	

@@ -41,6 +41,7 @@ gcc -g 		main.o \
 			message.o \
 			proto.o \
 			lib/libnacl.a \
+			lib/randombytes.o \
 				-o underlink
 
 ./underlink

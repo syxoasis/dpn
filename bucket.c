@@ -123,10 +123,12 @@ int addNodeToBuckets(underlink_node newnode)
 		{
 			memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
 			
+			//	printf("My Node ID: 0x%08llX\n", ntohll(thisNode.nodeID));
+			
 			if (debug)
-				printf("Inserted %s node %llu into bucket %i (pos %i)\n",
+				printf("Inserted %s node 0x%08llX into bucket %i (pos %i)\n",
 							newnode.routermode == ROUTER ? "router" : "direct-only",
-							newnode.nodeID, b, n);
+							ntohll(newnode.nodeID), b, n);
 			return b;
 		}
 	}
