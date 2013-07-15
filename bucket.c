@@ -7,7 +7,7 @@
 #include "main.h"
 
 extern underlink_node thisNode;
-extern underlink_node buckets[sizeof(underlink_nodeID)][NODES_PER_BUCKET];
+extern underlink_node buckets[sizeof(underlink_nodeID) * 8][NODES_PER_BUCKET];
 
 void printbits(unsigned long long b, int n)
 {
@@ -54,8 +54,8 @@ int keyComparator(const void* a, const void* b)
 	struct underlink_node* ia = (struct underlink_node*) &a;
 	struct underlink_node* ib = (struct underlink_node*) &b;
 	
-	//if (getDistance(thisNode, *ia) < getDistance(thisNode, *ib)) return 1;
-	//if (getDistance(thisNode, *ia) > getDistance(thisNode, *ib)) return -1;
+	if (uint128_lessthan(getDistance(thisNode, *ia), getDistance(thisNode, *ib))) return 1;
+	if (uint128_greaterthan(getDistance(thisNode, *ia), getDistance(thisNode, *ib))) return -1;
 	return 0;
 }
 
@@ -73,7 +73,7 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, und
 	if (startBucket == 0 || uint128_equals(thisNode.nodeID, check.nodeID))
 		return thisNode;
 		
-	int lastdist = 0;
+	uint128_t lastdist;
 	underlink_node returnnode;
 	memset(&returnnode.nodeID, 0, sizeof(underlink_pubkey));
 
@@ -94,8 +94,8 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, und
 			if (nodes[n].routermode != routermode)
 				continue;
 
-			if (getDistance(nodes[n], check) < lastdist ||
-				lastdist == 0)
+			if (uint128_lessthan(getDistance(nodes[n], check), lastdist) ||
+				(lastdist.big == 0 && lastdist.small == 0))
 			{
 				returnnode = nodes[n];
 				lastdist = getDistance(nodes[n], check);
@@ -119,7 +119,7 @@ int addNodeToBuckets(underlink_node newnode)
 	int n;
 	for (n = 0; n < NODES_PER_BUCKET; n ++)
 	{
-		if (buckets[b][n].nodeID[0] == 0)
+		if (buckets[b][n].nodeID.big == 0 && buckets[b][n].nodeID.small == 0)
 		{
 			memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
 			
@@ -134,14 +134,15 @@ int addNodeToBuckets(underlink_node newnode)
 		}
 	}
 	
-	uint64_t closeness = 0;
+	uint128_t closeness;
 	int i = 0;
 	for (n = 0; n < NODES_PER_BUCKET; n ++)
 	{
-		int dist = getDistance(buckets[b][n], newnode);
-		if (dist > closeness)
+		uint128_t dist = getDistance(buckets[b][n], newnode);
+		
+		if (uint128_greaterthan(dist, closeness))
 		{
-			closeness = dist;
+			uint128_replace(&closeness, dist);
 			i = n;
 		}
 	}

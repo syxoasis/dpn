@@ -6,6 +6,8 @@ uint128_t uint128_xor(uint128_t a, uint128_t b)
 	
 	r.big = a.big ^ b.big;
 	r.small = a.small ^ b.small;
+	
+	return r;
 }
 
 int uint128_compare(uint128_t a, uint128_t b)
@@ -26,4 +28,10 @@ int uint128_lessthan(uint128_t a, uint128_t b)
 int uint128_equals(uint128_t a, uint128_t b)
 {
 	return a.small == b.small && a.big == b.big;
+}
+
+void uint128_replace(uint128_t* a, uint128_t b)
+{
+	a->big = b.big;
+	a->small = b.small;
 }
