@@ -32,7 +32,7 @@
 #include "message.h"
 #include "proto.h"
 
-underlink_node buckets[sizeof(underlink_nodeID)][NODES_PER_BUCKET];
+underlink_node buckets[sizeof(underlink_nodeID) * 8][NODES_PER_BUCKET];
 underlink_node thisNode;
 
 int sockfd, tuntapfd;
