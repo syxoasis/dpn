@@ -36,12 +36,14 @@ gcc -g -c	node.c		-o node.o
 gcc -g -c 	message.c	-o message.o
 gcc -g -c	proto.c		-o proto.o
 gcc -g -c	key.c		-o key.o
+gcc -g -c	uint128.c	-o uint128.o
 gcc -g 		main.o \
 			bucket.o \
 			node.o \
 			message.o \
 			proto.o \
 			key.o \
+			uint128.o \
 			lib/libnacl.a \
 			lib/randombytes.o \
 				-o underlink

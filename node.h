@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 #include "proto.h"
 #include "key.h"
+#include "uint128.h"
 
 typedef enum underlink_routermode
 {
@@ -12,7 +13,7 @@ typedef enum underlink_routermode
 }
 underlink_routermode;
 
-typedef char underlink_nodeID[32];
+typedef uint128_t underlink_nodeID;
 
 typedef struct underlink_node
 {
@@ -31,4 +32,4 @@ typedef struct underlink_nodelist
 }
 underlink_nodelist;
 
-uint64_t getDistance(underlink_node one, underlink_node two);
+uint128_t getDistance(underlink_node one, underlink_node two);

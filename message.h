@@ -36,7 +36,7 @@ typedef struct underlink_message
 }
 underlink_message;
 
-underlink_message* underlink_message_construct(underlink_messagetype messagetype, underlink_pubkey localID, underlink_pubkey remoteID, int payloadsize);
+underlink_message* underlink_message_construct(underlink_messagetype messagetype, underlink_nodeID localID, underlink_nodeID remoteID, int payloadsize);
 int underlink_message_addnode(underlink_message* packet, underlink_node* node);
 int underlink_message_getkey(underlink_message* packet, void* output, int key);
 int underlink_message_pack(void* out, underlink_message* packet);

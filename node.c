@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "main.h"
 #include "node.h"
+#include "uint128.h"
 
 /*
  *	unsigned long long getDistance(underlink_node one, underlink_node two)
@@ -10,10 +11,9 @@
  *	Calculates the distance between the two node IDs.
  *	This is a simple XOR operation.
  */
-uint64_t getDistance(underlink_node one, underlink_node two)
+uint128_t getDistance(underlink_node one, underlink_node two)
 {
-//	return one.key ^ two.key;
-	return 3;
+	return uint128_xor(one.nodeID, two.nodeID);
 }
 
 void printNodeIPAddress(FILE* pipe, underlink_node node)

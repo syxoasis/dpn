@@ -33,8 +33,8 @@ int getBucketID(underlink_node check)
 	int i;
 	for (i = sizeof(underlink_nodeID); i > 0; i --)
 	{
-		if ((check.nodeID[i] & bits) == (thisNode.nodeID[i] & bits))
-			return sizeof(underlink_nodeID) - i;
+	//	if ((check.nodeID[i] & bits) == (thisNode.nodeID[i] & bits))
+	//		return sizeof(underlink_nodeID) - i;
 		
 		bits <<= 1;
 	}
@@ -54,8 +54,8 @@ int keyComparator(const void* a, const void* b)
 	struct underlink_node* ia = (struct underlink_node*) &a;
 	struct underlink_node* ib = (struct underlink_node*) &b;
 	
-	if (getDistance(thisNode, *ia) < getDistance(thisNode, *ib)) return 1;
-	if (getDistance(thisNode, *ia) > getDistance(thisNode, *ib)) return -1;
+	//if (getDistance(thisNode, *ia) < getDistance(thisNode, *ib)) return 1;
+	//if (getDistance(thisNode, *ia) > getDistance(thisNode, *ib)) return -1;
 	return 0;
 }
 
@@ -70,12 +70,12 @@ int keyComparator(const void* a, const void* b)
 underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, underlink_routermode routermode)
 {
 	int startBucket = getBucketID(check);	
-	if (startBucket == 0 || thisNode.nodeID == check.nodeID)
+	if (startBucket == 0 || uint128_equals(thisNode.nodeID, check.nodeID))
 		return thisNode;
 		
 	int lastdist = 0;
 	underlink_node returnnode;
-	memset(returnnode.nodeID, 0, sizeof(underlink_pubkey));
+	memset(&returnnode.nodeID, 0, sizeof(underlink_pubkey));
 
 	int b;
 	for (b = sizeof(underlink_nodeID); b > 0; b --)
@@ -88,7 +88,7 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, und
 		int n;
 		for (n = steps; n < NODES_PER_BUCKET; n ++)
 		{			
-			if (nodes[n].nodeID == 0 || &nodes[n] == 0)
+			if ((nodes[n].nodeID.big == 0 && nodes[n].nodeID.small == 0) || &nodes[n] == 0)
 				continue;
 				
 			if (nodes[n].routermode != routermode)

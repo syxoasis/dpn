@@ -265,7 +265,7 @@ int main(int argc, char* argv[])
 			
 			long readvalue = read(sockfd, &buffer, MTU);
 			
-			if (memcmp(message->remoteID, thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
+			if (memcmp(&message->remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
 			{
 				if (write(tuntapfd, message->packetbuffer, message->payloadsize) < 0)
 				{
@@ -276,7 +276,7 @@ int main(int argc, char* argv[])
 			}
 				else
 			{
-				if (thisNode.routermode == ROUTER || memcmp(message->remoteID, thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
+				if (thisNode.routermode == ROUTER || memcmp(&message->remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
 					sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
 				//else
 				//	fprintf(stderr, "Packet discarded: illegal attempt to route for node %llu\n", message->remoteID);
@@ -292,7 +292,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 
 	closest = getClosestAddressFromBuckets(destination, 0, ROUTER);
 
-	if (closest.nodeID == 0)
+	if (closest.nodeID.big == 0 && closest.nodeID.small)
 	{
 		//fprintf(stderr, "Remote node %llu is not accessible; no intermediate router known\n", destination.nodeID);
 		return -1;
