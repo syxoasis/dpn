@@ -19,36 +19,31 @@ void printbits(unsigned long long b, int n)
 	printf("\n");
 }
 
-/*
- * 	int getBucketID(underlink_node check)
- * 
- * 	Returns the bucket ID for the given node. This is
- *	calculated by the number of common bits at the
- *	beginning of the node IDs.
- */
 int getBucketID(underlink_node check)
 {
-	uint64_t bits = ~0ULL >> 16;
+	uint128_t bits;
+	memset(&bits, ~0, sizeof(uint128_t));
 
 	int i;
-	for (i = sizeof(underlink_nodeID); i > 0; i --)
+	for (i = sizeof(underlink_nodeID) * 8; i > 0; i --)
 	{
-	//	if ((check.nodeID[i] & bits) == (thisNode.nodeID[i] & bits))
-	//		return sizeof(underlink_nodeID) - i;
-		
-		bits <<= 1;
+		if (i <= 64)
+		{
+			if ((check.nodeID.small & bits.small) == (thisNode.nodeID.small & bits.small))
+				return (sizeof(underlink_nodeID) * 8) - i;
+			bits.small <<= 1;			
+		}
+			else
+		{
+			if ((check.nodeID.big & bits.big) == (thisNode.nodeID.big & bits.big))
+				return (sizeof(underlink_nodeID) * 8) - i;
+			bits.big <<= 1;
+		}
 	}
 
-	return sizeof(underlink_nodeID);
+	return sizeof(underlink_nodeID) * 8;
 }
 
-/*	
- *	long long unsigned int keyComparator(const underlink_node* a, const underlink_node* b)
- *
- *	Used for qsort to determine whether the distance between
- *	the current node and the two given nodes should result in
- *	the node being moved in the working nodeset.
- */
 int keyComparator(const void* a, const void* b)
 {	
 	struct underlink_node* ia = (struct underlink_node*) &a;
@@ -59,14 +54,6 @@ int keyComparator(const void* a, const void* b)
 	return 0;
 }
 
-/*
- * 	underlink_node getClosestAddressFromBuckets(underlink_node check)
- * 
- * 	Searches the bucket list for the closest destination
- *	node to the node given. This will start at the most 
- *	appropriate bucket, working upwards until the closest
- *	address is found. 
- */
 underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, underlink_routermode routermode)
 {
 	int startBucket = getBucketID(check);	
@@ -106,12 +93,6 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, und
 	return returnnode;
 }
 
-/*
- * 	int addNodeToBuckets(underlink_node newnode)
- * 
- * 	Adds the given node to the bucket list. The bucket
- *	is determined automatically, and the number returned.
- */
 int addNodeToBuckets(underlink_node newnode)
 {
 	int b = getBucketID(newnode);

@@ -5,12 +5,6 @@
 #include "node.h"
 #include "uint128.h"
 
-/*
- *	unsigned long long getDistance(underlink_node one, underlink_node two)
- *
- *	Calculates the distance between the two node IDs.
- *	This is a simple XOR operation.
- */
 uint128_t getDistance(underlink_node one, underlink_node two)
 {
 	return uint128_xor(one.nodeID, two.nodeID);
