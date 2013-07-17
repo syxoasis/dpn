@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 	{
 		printf("Using UDP port %i\n", portnumber);
 		printf("Maximum peer count: %lu\n", sizeof(underlink_nodeID) * NODES_PER_BUCKET);
-		printf("%lu-bit peer address space\n", sizeof(underlink_nodeID));
+		printf("%lu-bit peer address space\n", sizeof(underlink_nodeID) * 8);
 		printf("Bucket table size in memory: %lukb\n",
 			(sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET) / 24);
 	}
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 	srand(time(NULL));
 	
 	int i;
-	for (i = 0; i < 15; i ++)
+	for (i = 0; i < 10; i ++)
 	{
 		underlink_node n;
 		underlink_pubkey pk;

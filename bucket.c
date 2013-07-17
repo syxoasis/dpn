@@ -13,10 +13,10 @@ void printbits(unsigned long long b, int n)
 {
 	for (--n; n >= 0; --n)
 	{
-		if ((n+1) % 8 == 0) printf(" ");
 		printf("%c", (b & 1ULL << n) ? '1' : '0');
+		if ((n) % 8 == 0) printf("");
 	}
-	printf("\n");
+	printf(" ");
 }
 
 int getBucketID(underlink_node check)
@@ -25,20 +25,16 @@ int getBucketID(underlink_node check)
 	memset(&bits, ~0, sizeof(uint128_t));
 
 	int i;
-	for (i = sizeof(underlink_nodeID) * 8; i > 0; i --)
+	for (i = 0; i < sizeof(underlink_nodeID) * 8; i ++)
 	{
-		if (i <= 64)
-		{
-			if ((check.nodeID.small & bits.small) == (thisNode.nodeID.small & bits.small))
-				return (sizeof(underlink_nodeID) * 8) - i;
-			bits.small <<= 1;			
-		}
-			else
-		{
-			if ((check.nodeID.big & bits.big) == (thisNode.nodeID.big & bits.big))
-				return (sizeof(underlink_nodeID) * 8) - i;
+		if (i < 64)
+			bits.small <<= 1;
+		else
 			bits.big <<= 1;
-		}
+		
+		if ((check.nodeID.small & bits.small) == (thisNode.nodeID.small & bits.small) &&
+			(check.nodeID.big & bits.big) == (thisNode.nodeID.big & bits.big))
+			return (sizeof(underlink_nodeID) * 8) - i;
 	}
 
 	return sizeof(underlink_nodeID) * 8;
