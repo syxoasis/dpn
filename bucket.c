@@ -56,7 +56,7 @@ int keyComparator(const void* a, const void* b)
 	return 0;
 }
 
-underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, underlink_routermode routermode)
+underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 {
 	int startBucket = getBucketID(check);
 	if (startBucket == 0 || uint128_equals(thisNode.nodeID, check.nodeID))
@@ -106,7 +106,7 @@ int addNodeToBuckets(underlink_node newnode)
 			
 			if (debug)
 			{
-				printf("Inserted %s node ", newnode.routermode == ROUTER ? "router" : "direct-only");
+				printf("Inserted node ");
 				printNodeIPAddress(stdout, &newnode.nodeID);
 				printf(" into bucket %i (pos %i)\n", b, n);
 			}
@@ -128,9 +128,14 @@ int addNodeToBuckets(underlink_node newnode)
 		}
 	}
 	
-	//if (debug)
-	//	printf("Replacing node 0x%08llX (pos %i), with 0x%08llX in bucket %i\n",
-	//			ntohll(buckets[b][i].nodeID), i, ntohll(newnode.nodeID), b);
+	if (debug)
+	{
+		printf("Replacing node ");
+		printNodeIPAddress(stdout, &buckets[b][i].nodeID);
+		printf(" (pos %i) with ", i);
+		printNodeIPAddress(stdout, &newnode.nodeID);
+		printf(" in bucket %i\n", b);
+	}
 				
 	memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
 	

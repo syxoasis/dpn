@@ -2,15 +2,19 @@
 
 typedef enum underlink_messagetype
 {
-	KEYPAIR,
+	CONTROL,
 	IPPACKET
 }
 underlink_messagetype;
 
 typedef enum underlink_keytype
 {
-	PING,
-	SEARCH
+	ROUTE,				// Please route this packet for me
+	FORWARDED_REFER,	// Packet forwarded, please use this next hop next time
+	NOT_FORWARDED,		// Packet not forwarded, please try another hop
+	VERIFY,				// I want to add you to my node buckets
+	VERIFY_SUCCESS,		// Yes, add me to your node buckets
+	UNSPEC_ERROR		// An unspecified unrecoverable error occured
 }
 underlink_keytype;
 

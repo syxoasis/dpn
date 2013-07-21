@@ -9,7 +9,7 @@ underlink_message* underlink_message_construct(underlink_messagetype messagetype
 		underlink_nodeID localID, underlink_nodeID remoteID, int payloadsize)
 {	
 	int payloadbytes;
-	if (messagetype == KEYPAIR)
+	if (messagetype == CONTROL)
 		payloadbytes = sizeof(underlink_nodelist) + (sizeof(underlink_nodelist) * payloadsize);
 	else
 		payloadbytes = sizeof(underlink_nodelist) + payloadsize;
@@ -20,7 +20,7 @@ underlink_message* underlink_message_construct(underlink_messagetype messagetype
 	memcpy(&out->localID, &localID, sizeof(underlink_nodeID));
 	memcpy(&out->remoteID, &remoteID, sizeof(underlink_nodeID));
 	
-	if (messagetype == KEYPAIR)
+	if (messagetype == CONTROL)
 		out->payloadsize = 0;
 	else
 		out->payloadsize = payloadsize;
@@ -77,7 +77,7 @@ int underlink_message_getkey(underlink_message* packet, void* output, int key)
 int underlink_message_pack(void* out, underlink_message* packet)
 {
 	int size;
-	if (packet->message == KEYPAIR)
+	if (packet->message == CONTROL)
 		size = sizeof(underlink_message) + (sizeof(underlink_nodelist) * packet->payloadsize);
 	else
 		size = sizeof(underlink_message) + packet->payloadsize;

@@ -60,7 +60,6 @@ int main(int argc, char* argv[])
 		
 	thisNode.endpoint.sin_family = AF_INET;
 	inet_pton(AF_INET, "0.0.0.0", &thisNode.endpoint.sin_addr);
-	thisNode.routermode = ROUTER;
 	thisNode.endpoint.sin_port = htons(portnumber);
 	
 	while ((opt = getopt(argc, argv, "p:odr")) != -1)
@@ -73,18 +72,6 @@ int main(int argc, char* argv[])
 					portnumber = atoi(optarg);
 					thisNode.endpoint.sin_port = htons(portnumber);
 				}
-				break;
-				
-			case 'o':
-				thisNode.routermode = ORCHESTRATOR;
-				break;
-				
-			case 'd':
-				thisNode.routermode = DIRECT_ONLY;
-				break;
-				
-			case 'r':
-				thisNode.routermode = ROUTER;
 				break;
 				
 			default:
@@ -103,15 +90,6 @@ int main(int argc, char* argv[])
 		printf("Bucket table size in memory: %lukb\n",
 			(sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET) / 24);
 	}
-
-	switch (thisNode.routermode)
-	{
-		case DIRECT_ONLY:	printf("Operating in direct-only mode (TUN enabled)\n"); break;
-		case ORCHESTRATOR:	printf("Operating in orchestrator mode (TUN disabled)\n"); break;
-		case ROUTER:
-		default:
-			printf("Operating in router mode (TUN enabled)\n"); break;
-	}
 	
 	srand(time(NULL));
 	
@@ -128,7 +106,6 @@ int main(int argc, char* argv[])
 		n.endpoint.sin_family = AF_INET;
 		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
 		n.endpoint.sin_port = htons(3456);
-		n.routermode = ROUTER;
 		proto_init(n.crypto);
 		addNodeToBuckets(n);
 	}
@@ -157,48 +134,45 @@ int main(int argc, char* argv[])
 	printNodeIPAddress(stdout, &thisNode.nodeID);
 	printf("/8\n");
 
-	if (thisNode.routermode != ORCHESTRATOR)
-	{
-		#ifdef __linux__
-			if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
-			{
-				fprintf(stderr, "Unable to find /dev/net/tun\n");
-				return -1;
-			}
-		#else
-			if ((tuntapfd = open(nodename, O_RDWR)) < 0)
-			{
-				fprintf(stderr, "Unable to open tuntap device '%s'\n", nodename);
-				return -1;
-			}
-		#endif
+	#ifdef __linux__
+		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
+		{
+			fprintf(stderr, "Unable to find /dev/net/tun\n");
+			return -1;
+		}
+	#else
+		if ((tuntapfd = open(nodename, O_RDWR)) < 0)
+		{
+			fprintf(stderr, "Unable to open tuntap device '%s'\n", nodename);
+			return -1;
+		}
+	#endif
 		
-		#ifdef __linux__
-			fprintf(stderr, "Please set interface prefix manually using ip -6 addr add\n");
-		#else
-			struct in6_aliasreq addreq6;
-			memset(&addreq6, 0, sizeof(addreq6));
-			sprintf(addreq6.ifra_name, "tun0");
+	#ifdef __linux__
+		fprintf(stderr, "Please set interface prefix manually using ip -6 addr add\n");
+	#else
+		struct in6_aliasreq addreq6;
+		memset(&addreq6, 0, sizeof(addreq6));
+		sprintf(addreq6.ifra_name, "tun0");
 
-			addreq6.ifra_addr.sin6_family = AF_INET6;
-			addreq6.ifra_addr.sin6_len = sizeof(struct sockaddr_in6);
-			memcpy(&addreq6.ifra_addr.sin6_addr, prefix, sizeof(struct in6_addr));
+		addreq6.ifra_addr.sin6_family = AF_INET6;
+		addreq6.ifra_addr.sin6_len = sizeof(struct sockaddr_in6);
+		memcpy(&addreq6.ifra_addr.sin6_addr, prefix, sizeof(struct in6_addr));
 
-			addreq6.ifra_prefixmask.sin6_family = AF_INET6;
-			addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
-			memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, 1);
+		addreq6.ifra_prefixmask.sin6_family = AF_INET6;
+		addreq6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
+		memset(&addreq6.ifra_prefixmask.sin6_addr, 0xFF, 1);
 		
-			addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
-			addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
+		addreq6.ifra_lifetime.ia6t_pltime = 0xFFFFFFFFL;
+		addreq6.ifra_lifetime.ia6t_vltime = 0xFFFFFFFFL;
 
-			int sockfd6 = socket(AF_INET6, SOCK_DGRAM, 0);
-			if (sockfd6 < 0)
-				perror("socket(AF_INET6)");
+		int sockfd6 = socket(AF_INET6, SOCK_DGRAM, 0);
+		if (sockfd6 < 0)
+			perror("socket(AF_INET6)");
 
-			if (ioctl(sockfd6, __IOCTL_OPERATION, &addreq6) == -1)
-				perror("SIOCAIFADDR_IN6");
-		#endif
-	}
+		if (ioctl(sockfd6, __IOCTL_OPERATION, &addreq6) == -1)
+			perror("SIOCAIFADDR_IN6");
+	#endif
 	
 	char buffer[MTU];
 	struct ip6_hdr* headers = (struct ip6_hdr*) &buffer;
@@ -233,18 +207,13 @@ int main(int argc, char* argv[])
 				return -1;
 			}
 			
-		//	if (dst_addr->s6_addr[0] != 0xFD)
-		//		continue;
+			if (dst_addr->s6_addr[0] != 0xFD ||
+				src_addr->s6_addr[0] != 0xFD)
+				continue;
 		
 			struct underlink_node source, destination;
 			memcpy((void*) &source.nodeID, src_addr->s6_addr, sizeof(underlink_nodeID));
 			memcpy((void*) &destination.nodeID, dst_addr->s6_addr, sizeof(underlink_nodeID));
-			
-			printf("Source address: ");
-			printNodeIPAddress(stdout, (void*) src_addr->s6_addr);
-			printf("\nDestination address: ");
-			printNodeIPAddress(stdout, (void*) dst_addr->s6_addr);
-			printf("\n");
 			
 			if (memcmp(&src_addr->s6_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
 			{
@@ -278,16 +247,7 @@ int main(int argc, char* argv[])
 				}
 			}
 				else
-			{
-				if (thisNode.routermode == ROUTER || memcmp(&message->remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
-					sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
-				else
-				{
-					fprintf(stderr, "Packet discarded: illegal attempt to route for node ");
-					printNodeIPAddress(stderr, &message->remoteID);
-					fprintf(stderr, "\n");
-				}
-			}
+			sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
 		}
 	}
 }
@@ -297,7 +257,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 	underlink_node closest;
 	memset(&closest, 0, sizeof(char) * 16);
 
-	closest = getClosestAddressFromBuckets(destination, 0, ROUTER);
+	closest = getClosestAddressFromBuckets(destination, 0);
 
 	if (closest.nodeID.big == 0 && closest.nodeID.small)
 	{
