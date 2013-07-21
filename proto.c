@@ -79,9 +79,9 @@ void taia_now(struct taia *t)
 
 int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len)
 {
-	if (len + noncelength + crypto_box_curve25519xsalsa20poly1305_BOXZEROBYTES > MAX_BUFFER_SIZE)
+	if (len + noncelength + crypto_box_curve25519xsalsa20poly1305_BOXZEROBYTES > MTU)
 	{
-		fprintf(stderr, "Encryption failed (packet length %i is above MAX_BUFFER_SIZE %i)\n", len, MAX_BUFFER_SIZE);
+		fprintf(stderr, "Encryption failed (packet length %i is above MTU %i)\n", len, MTU);
 		return -1;
 	}
 		
@@ -116,9 +116,9 @@ int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, u
 
 int proto_decode(proto_nacl inst, unsigned char* input, unsigned char* output, unsigned int len)
 {
-	if (len - crypto_box_curve25519xsalsa20poly1305_ZEROBYTES > MAX_BUFFER_SIZE)
+	if (len - crypto_box_curve25519xsalsa20poly1305_ZEROBYTES > MTU)
 	{
-		fprintf(stderr, "Decryption failed (packet length %i is above MAX_BUFFER_SIZE %i)\n", len, MAX_BUFFER_SIZE);
+		fprintf(stderr, "Decryption failed (packet length %i is above MTU %i)\n", len, MTU);
 		return 0;
 	}
 	

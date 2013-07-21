@@ -47,6 +47,10 @@ int max(int a, int b)
 
 int main(int argc, char* argv[])
 {
+	printf("sizeof underlink_messagetype: %lu\n", sizeof(underlink_messagetype));
+	printf("sizeof underlink_nodeID: %lu\n", sizeof(underlink_nodeID));
+	printf("sizeof int: %lu\n", sizeof(int));
+	
 	int portnumber = 3456;
 	int opt;
 	char nodename[16];

@@ -2,8 +2,7 @@
 #define NODES_PER_BUCKET 24
 
 // Maximum transmission unit supported
-#define MTU 1200
-#define MAX_BUFFER_SIZE 1546
+#define MTU 1400
 
 // Print debug output to stdout
 #define debug 1

@@ -46,10 +46,10 @@ void underlink_message_dump(underlink_message* packet)
 	printf("\tPacket type: ");
 	switch (packet->message)
 	{
-		case IPPACKET:			printf("IP packet\n"); break;
-		case FORWARDED_REFER:	printf("Forwarded refer\n"); break;
+		case IPPACKET:			printf("Packet forward request\n"); break;
+		case FORWARDED_REFER:	printf("Packet forwarded, referral provided\n"); break;
 		case NOT_FORWARDED:		printf("Not forwarded\n"); break;
-		case VERIFY:			printf("Verify\n"); break;
+		case VERIFY:			printf("Verify request\n"); break;
 		case VERIFY_SUCCESS:	printf("Verify success\n"); break;
 		case UNSPEC_ERROR:		printf("Unspecified error\n"); break;
 	}
