@@ -286,10 +286,13 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		
 	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.nodeID, closest.nodeID, length);
 	char* sendbuffer = calloc(1, MTU);
-	memcpy(&msg->packetbuffer, &buffer, length);
+	memcpy(&msg->packetbuffer, &buffer, MTU);
 	int sendsize = underlink_message_pack(sendbuffer, msg);
-	printf("Send size: %i bytes\n", sendsize);
-	underlink_message_dump(msg);
+	
+	printf("sizeof(underlink_message): %i\n", sizeof(underlink_message));
+	printf("length: %i\n", length);
+	printf("sendsize: %i\n", sendsize);
+	printf("sendlength: %i\n", length + sizeof(underlink_message));
 	
 	if (debug)
 	{

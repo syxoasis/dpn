@@ -12,7 +12,7 @@ underlink_message* underlink_message_construct(underlink_messagetype messagetype
 	if (messagetype == CONTROL)
 		payloadbytes = sizeof(underlink_nodelist) + (sizeof(underlink_nodelist) * payloadsize);
 	else
-		payloadbytes = sizeof(underlink_nodelist) + payloadsize;
+		payloadbytes = payloadsize;
 	
 	underlink_message* out = calloc(1, sizeof(underlink_message) + payloadbytes);
 
@@ -115,7 +115,7 @@ void underlink_message_dump(underlink_message* packet)
 		for (s = 0; s < packet->payloadsize; s ++)
 		{
 			if (s % 8 == 0)
-				printf("0x%02X: ", s & 0xFF);
+				printf("%03i-%03i: ", s, s + 7);
 			
 			printf("%08x ", packet->packetbuffer[s]);
 
