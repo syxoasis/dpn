@@ -140,17 +140,16 @@ int main(int argc, char* argv[])
 		struct ifreq ifr;
 		memset(&ifr, 0, sizeof(ifr));
 	
-		if ((tuntap->baseintf.filedesc = open("/dev/net/tun", O_RDWR)) < 0)
+		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
 		{
 			fprintf(stderr, "Unable to find /dev/net/tun\n");
 			return -1;
 		}
 	
-		strcpy(ifr.ifr_name, tuntap->nodename);
 		ifr.ifr_flags = IFF_TUN;
 		ifr.ifr_flags |= IFF_NO_PI;
 	
-		if (ioctl(tuntap->baseintf.filedesc, TUNSETIFF, (void *) &ifr) < 0)
+		if (ioctl(tuntapfd, TUNSETIFF, (void *) &ifr) < 0)
 		{
 			fprintf(stderr, "Unable to configure tuntap device\n");
 			return -1;
