@@ -5,29 +5,6 @@
 #include "node.h"
 #include "message.h"
 
-underlink_message* underlink_message_construct(underlink_messagetype messagetype,
-		underlink_nodeID localID, underlink_nodeID remoteID, int payloadsize)
-{	
-	int payloadbytes;
-	if (messagetype == CONTROL)
-		payloadbytes = sizeof(underlink_nodelist) + (sizeof(underlink_nodelist) * payloadsize);
-	else
-		payloadbytes = payloadsize;
-	
-	underlink_message* out = calloc(1, sizeof(underlink_message) + payloadbytes);
-
-	out->message = messagetype;
-	memcpy(&out->localID, &localID, sizeof(underlink_nodeID));
-	memcpy(&out->remoteID, &remoteID, sizeof(underlink_nodeID));
-	
-	if (messagetype == CONTROL)
-		out->payloadsize = 0;
-	else
-		out->payloadsize = payloadsize;
-
-	return out;
-}
-
 int underlink_message_addnode(underlink_message* packet, underlink_node* node)
 {
 	if (packet == 0)

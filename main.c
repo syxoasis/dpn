@@ -285,9 +285,6 @@ int main(int argc, char* argv[])
 			memset(&buffer, 0, MTU);
 			long readvalue = read(sockfd, &buffer, MTU);
 			
-			printf("Received %li bytes from UDP\n", readvalue);
-			underlink_message_dump(message);
-			
 			if (memcmp(&message->remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
 			{
 				if (write(tuntapfd, message->packetbuffer, message->payloadsize) <= 0)
@@ -296,8 +293,6 @@ int main(int argc, char* argv[])
 					perror("write");
 					fprintf(stderr, "\n");
 				}
-					else
-				printf("Written to TUN/TAP\n");
 			}
 				else
 			{
@@ -329,17 +324,13 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		fprintf(stderr, " has no remote endpoint\n");
 		return -1;
 	}
-
-	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.nodeID, closest.nodeID, length);
-	//printf("1. Allocate length %i\n", length);
-	memcpy(&msg->packetbuffer, &buffer, length);
-	//memset(&msg->packetbuffer, 0, length);
 	
-	char* sendbuffer = calloc(1, MTU + sizeof(underlink_message));
-	int sendsize = underlink_message_pack(sendbuffer, msg);
-	//printf("2. Send size returned from pack is %i\n", sendsize);
-	
-	underlink_message_dump(msg);
+	underlink_message msg;
+	msg.message = IPPACKET;
+	msg.localID = thisNode.nodeID;
+	msg.remoteID = closest.nodeID;
+	msg.payloadsize = length;
+	memcpy(msg.packetbuffer, buffer, length);
 	
 	if (debug)
 	{
@@ -350,7 +341,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		fprintf(stderr, "\n");
 	}
 		
-	int sentlen = sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint));
+	int sentlen = sendto(sockfd, (char*) &msg, length + sizeof(underlink_message), 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint));
 	
 	if (sentlen <= 0)
 	{
@@ -359,9 +350,4 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		fprintf(stderr, ":\n -> ");
 		perror("sendto");
 	}
-		else
-	printf("Written %i bytes to UDP\n", sentlen);
-	
-	free(sendbuffer);
-	free(msg);
 }

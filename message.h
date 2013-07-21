@@ -1,4 +1,5 @@
 #pragma once
+#include "main.h"
 
 typedef enum underlink_messagetype
 {
@@ -35,12 +36,11 @@ typedef struct underlink_message
 	{
 		underlink_nodelist* nodes;
 		underlink_keypair keypair;
-		char* packetbuffer;
+		char packetbuffer[MTU];
 	};
 }
 underlink_message;
 
-underlink_message* underlink_message_construct(underlink_messagetype messagetype, underlink_nodeID localID, underlink_nodeID remoteID, int payloadsize);
 int underlink_message_addnode(underlink_message* packet, underlink_node* node);
 int underlink_message_getkey(underlink_message* packet, void* output, int key);
 int underlink_message_pack(void* out, underlink_message* packet);
