@@ -124,6 +124,8 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 	
+	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
+	
 	if (nodename)
 		strcpy(nodename, "/dev/tun0");
 		
@@ -232,22 +234,29 @@ int main(int argc, char* argv[])
 		
 		if (FD_ISSET(sockfd, &selectlist) != 0)
 		{
-			continue;
 			struct underlink_message* message = (underlink_message*) &buffer;
 			
+			memset(&buffer, 0, MTU);
 			long readvalue = read(sockfd, &buffer, MTU);
 			
-			if (memcmp(&message->remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
+			printf("Received %li bytes from UDP\n", readvalue);
+			underlink_message_dump(message);
+			
+			if (memcmp(&message->remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
 			{
-				if (write(tuntapfd, message->packetbuffer, message->payloadsize) < 0)
+				if (write(tuntapfd, message->packetbuffer, message->payloadsize) <= 0)
 				{
 					fprintf(stderr, "TUN/TAP error when attempting to write to adapter: ");
 					perror("write");
 					fprintf(stderr, "\n");
 				}
+					else
+				printf("Written to TUN/TAP\n");
 			}
 				else
-			sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
+			{
+				//sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
+			}
 		}
 	}
 }
@@ -279,6 +288,8 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 	char* sendbuffer = calloc(1, MTU);
 	memcpy(&msg->packetbuffer, &buffer, length);
 	int sendsize = underlink_message_pack(sendbuffer, msg);
+	printf("Send size: %i bytes\n", sendsize);
+	underlink_message_dump(msg);
 	
 	if (debug)
 	{
@@ -289,7 +300,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		fprintf(stderr, "\n");
 	}
 		
-	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
+	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) <= 0)
 	{
 		fprintf(stderr, "Socket error when attempting to send to ");
 		printNodeIPAddress(stderr, &closest.nodeID);

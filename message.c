@@ -95,7 +95,11 @@ int underlink_message_unpack(underlink_message* out, void* buffer, int buffersiz
 void underlink_message_dump(underlink_message* packet)
 {
 	printf("Message ID: 0x%X, payload size: %i\n", packet->message, packet->payloadsize);
-	//printf("\tLocal %llu -> Remote %llu\n", packet->localID, packet->remoteID);
+	printf("\tLocal ");
+	printNodeIPAddress(stdout, &packet->localID);
+	printf(" -> Remote ");
+	printNodeIPAddress(stdout, &packet->remoteID);
+	printf("\n");
 
 	underlink_nodelist* kp;
 	if (&packet->nodes == 0)
@@ -110,9 +114,12 @@ void underlink_message_dump(underlink_message* packet)
 		int s;
 		for (s = 0; s < packet->payloadsize; s ++)
 		{
+			if (s % 8 == 0)
+				printf("0x%02X: ", s & 0xFF);
+			
 			printf("%08x ", packet->packetbuffer[s]);
 
-			if (s % 8 == 0)
+			if (s % 8 == 7)
 			 	printf("\n\t");
 		}
 		
