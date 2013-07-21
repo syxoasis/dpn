@@ -86,6 +86,8 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 	
+	addNodeToBuckets(thisNode);
+	
 	while ((opt = getopt(argc, argv, "b:")) != -1)
 	{
 		switch (opt)
@@ -93,7 +95,8 @@ int main(int argc, char* argv[])
 			case 'b':
 				msg.message = VERIFY;
 				msg.localID = thisNode.nodeID;
-				msg.payloadsize = 0;
+				msg.payloadsize = sizeof(underlink_node);
+				memcpy(&msg.node, &thisNode, msg.payloadsize);
 				underlink_message_dump(&msg);
 				
 				int p = inet_pton(PF_INET, optarg, &remote.sin_addr);
@@ -123,8 +126,6 @@ int main(int argc, char* argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
-	
-	addNodeToBuckets(thisNode);
 	
 	if (debug)
 	{
@@ -324,6 +325,8 @@ int main(int argc, char* argv[])
 					break;
 					
 				case VERIFY:
+					message.node.endpoint = remote;
+					addNodeToBuckets(message.node);
 					msg.message = VERIFY_SUCCESS;
 					msg.localID = thisNode.nodeID;
 					msg.remoteID = message.localID;					
