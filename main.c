@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 	inet_pton(AF_INET, "0.0.0.0", &thisNode.endpoint.sin_addr);
 	thisNode.endpoint.sin_port = htons(portnumber);
 	
-	while ((opt = getopt(argc, argv, "p:odr")) != -1)
+	while ((opt = getopt(argc, argv, "p:b:")) != -1)
 	{
 		switch (opt)
 		{
@@ -73,6 +73,9 @@ int main(int argc, char* argv[])
 					thisNode.endpoint.sin_port = htons(portnumber);
 				}
 				break;
+				
+			case 'b':
+				
 				
 			default:
 				fprintf(stderr, "Usage: %s [-p port] [-o] [-d] [-r]\n", argv[0]);
@@ -92,24 +95,6 @@ int main(int argc, char* argv[])
 	}
 	
 	srand(time(NULL));
-	
-	int i;
-	for (i = 0; i < 10; i ++)
-	{
-		underlink_node n;
-		underlink_pubkey pk;
-		underlink_seckey sk;
-		
-		generateKey(&pk, &sk);
-		getNodeIDFromKey(&n.nodeID, pk);
-		
-		n.endpoint.sin_family = AF_INET;
-		inet_pton(AF_INET, "192.168.0.1", &n.endpoint.sin_addr);
-		n.endpoint.sin_port = htons(3456);
-		proto_init(n.crypto);
-		addNodeToBuckets(n);
-	}
-	
 	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	
 	if (sockfd < 0)
@@ -296,7 +281,7 @@ int main(int argc, char* argv[])
 			}
 				else
 			{
-				//sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
+				sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
 			}
 		}
 	}
@@ -309,7 +294,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 
 	closest = getClosestAddressFromBuckets(destination, 0);
 
-	if (closest.nodeID.big == 0 && closest.nodeID.small)
+	if (closest.nodeID.big == 0 && closest.nodeID.small == 0)
 	{
 		fprintf(stderr, "Remote node ");
 		printNodeIPAddress(stderr, &destination.nodeID);
