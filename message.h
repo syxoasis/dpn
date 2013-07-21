@@ -24,8 +24,8 @@ underlink_keypair;
 typedef struct underlink_message
 {
 	underlink_messagetype message;
-	underlink_pubkey localID;
-	underlink_pubkey remoteID;
+	underlink_nodeID localID;
+	underlink_nodeID remoteID;
 	int payloadsize;
 	union
 	{

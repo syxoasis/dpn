@@ -33,3 +33,4 @@ typedef struct underlink_nodelist
 underlink_nodelist;
 
 uint128_t getDistance(underlink_node one, underlink_node two);
+void printNodeIPAddress(FILE* pipe, underlink_nodeID* nodeID);

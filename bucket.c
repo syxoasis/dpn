@@ -107,7 +107,7 @@ int addNodeToBuckets(underlink_node newnode)
 			if (debug)
 			{
 				printf("Inserted %s node ", newnode.routermode == ROUTER ? "router" : "direct-only");
-				printNodeIPAddress(stdout, newnode);
+				printNodeIPAddress(stdout, &newnode.nodeID);
 				printf(" into bucket %i (pos %i)\n", b, n);
 			}
 			

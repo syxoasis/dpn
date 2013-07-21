@@ -30,14 +30,14 @@ then
 	cp ${NACLDIR}/include/${ABI}/* include/
 fi
 
-gcc -g -c	main.c		-o main.o
-gcc -g -c	bucket.c 	-o bucket.o
-gcc -g -c	node.c		-o node.o
-gcc -g -c 	message.c	-o message.o
-gcc -g -c	proto.c		-o proto.o
-gcc -g -c	key.c		-o key.o
-gcc -g -c	uint128.c	-o uint128.o
-gcc -g 		main.o \
+gcc -g -c -wall	main.c		-o main.o
+gcc -g -c -wall	bucket.c 	-o bucket.o
+gcc -g -c -wall	node.c		-o node.o
+gcc -g -c -wall	message.c	-o message.o
+gcc -g -c -wall	proto.c		-o proto.o
+gcc -g -c -wall	key.c		-o key.o
+gcc -g -c -wall	uint128.c	-o uint128.o
+gcc -g -wall	main.o \
 			bucket.o \
 			node.o \
 			message.o \
