@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 	
 	generateKey(&localPublicKey, &localSecretKey);
 	getNodeIDFromKey(&thisNode.nodeID, localPublicKey);
-	
+		
 	thisNode.endpoint.sin_family = AF_INET;
 	inet_pton(AF_INET, "0.0.0.0", &thisNode.endpoint.sin_addr);
 	thisNode.routermode = ROUTER;
@@ -225,9 +225,8 @@ int main(int argc, char* argv[])
 		if (FD_ISSET(tuntapfd, &selectlist) != 0)
 		{
 			char buffer[MTU];
-			struct ip6_hdr* headers = (struct ip6_hdr*) &buffer;
-			
 			long readvalue = read(tuntapfd, &buffer, MTU);
+			struct ip6_hdr* headers = (struct ip6_hdr*) &buffer;
 			
 			if (readvalue < 0)
 			{
@@ -238,8 +237,14 @@ int main(int argc, char* argv[])
 			struct in6_addr* src_addr = &headers->ip6_src;
 			struct in6_addr* dst_addr = &headers->ip6_dst;
 			
-			//if (dst_addr->s6_addr[0] == 0xFD)
-			//	continue;
+			if (dst_addr->s6_addr[0] != 0xFD)
+				continue;
+			
+			printf("Source address: ");
+			printNodeIPAddress(stdout, src_addr);
+			printf("\nDestination address: ");
+			printNodeIPAddress(stdout, dst_addr);
+			printf("\n");
 		
 			struct underlink_node source, destination;
 			memcpy((void*) &source.nodeID, (void*) &src_addr->s6_addr, sizeof(underlink_nodeID));
@@ -262,6 +267,7 @@ int main(int argc, char* argv[])
 		
 		if (FD_ISSET(sockfd, &selectlist) != 0)
 		{
+			continue;
 			char buffer[MTU];
 			struct underlink_message* message = (underlink_message*) &buffer;
 			

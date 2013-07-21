@@ -96,7 +96,6 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps, und
 int addNodeToBuckets(underlink_node newnode)
 {
 	int b = getBucketID(newnode);
-	printf("Given bucket ID: %i\n", b);
 	
 	int n;
 	for (n = 0; n < NODES_PER_BUCKET; n ++)

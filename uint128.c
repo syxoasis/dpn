@@ -1,4 +1,6 @@
 #include "uint128.h"
+#define ntohll(x) (((uint64_t)(ntohl((uint32_t)((x << 32) >> 32))) << 32) | ntohl(((uint32_t)(x >> 32))))
+#define htonll(x) ntohll(x)
 
 uint128_t uint128_xor(uint128_t a, uint128_t b)
 {
@@ -40,4 +42,16 @@ void uint128_replace(uint128_t* a, uint128_t b)
 {
 	a->big = b.big;
 	a->small = b.small;
+}
+
+void uint128_makeBigEndian(uint128_t* a)
+{
+	a->big = htonll(a->big);
+	a->small = htonll(a->small);
+}
+
+void uint128_makeLittleEndian(uint128_t* a)
+{
+	a->big = ntohll(a->big);
+	a->small = ntohll(a->small);
 }
