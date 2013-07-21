@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
 		sai.sin6_family = AF_INET6;
 		sai.sin6_port = 0;
 	
-		if (inet_pton(AF_INET6, prefix, (void*) &sai.sin6_addr) <= 0)
+		if (inet_pton(AF_INET6, prefix, (void*) &sai.sin6_addr) < 0)
 		{
 			perror("inet_pton");
 			return -1;
@@ -190,7 +190,6 @@ int main(int argc, char* argv[])
 		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
 	
 		int ret = ioctl(conffd, SIOCSIFFLAGS, &ifr);
-		printf("ret: %d\n", ret);
 	
 		close(conffd);
 	#else
