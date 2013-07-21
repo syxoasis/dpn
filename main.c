@@ -110,19 +110,26 @@ int main(int argc, char* argv[])
 				msg.payloadsize = 0;
 				underlink_message_dump(&msg);
 				
-				inet_pton(AF_INET, optarg, &remote);
+				int p = inet_pton(PF_INET, optarg, &remote.sin_addr);
+				if (p < 0)
+					perror("inet_pton");
+				
 				remote.sin_family = AF_INET;
+				remote.sin_port = htons(portnumber);
 				
 				int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(underlink_message), 0, (struct sockaddr*) &remote, addrlen);
 				
+				char foo[INET_ADDRSTRLEN];
+				inet_ntop(AF_INET, &remote.sin_addr, &foo, 128);
+				
 				if (sentlen <= 0)
 				{
-					char foo[128];
-					inet_ntop(AF_INET, &remote, &foo, 128);
-					
 					fprintf(stderr, "Socket error when attempting to send bootstrap message to %s:\n -> ", foo);
 					perror("sendto");
+					break;
 				}
+
+				printf("Sent bootstrap packet to %s\n", foo);
 				break;
 				
 			default:
