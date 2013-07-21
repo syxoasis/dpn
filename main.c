@@ -52,6 +52,11 @@ int main(int argc, char* argv[])
 	char nodename[16];
 	fd_set selectlist;
 	
+	underlink_message msg;
+	struct sockaddr_in remote;
+	socklen_t addrlen = sizeof(remote);
+	
+	memset(&msg, 0, sizeof(underlink_message));
 	memset(&buckets, 0, sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET);
 	memset(&thisNode, 0, sizeof(underlink_node));
 	
@@ -62,7 +67,7 @@ int main(int argc, char* argv[])
 	inet_pton(AF_INET, "0.0.0.0", &thisNode.endpoint.sin_addr);
 	thisNode.endpoint.sin_port = htons(portnumber);
 	
-	while ((opt = getopt(argc, argv, "p:b:")) != -1)
+	/*while ((opt = getopt(argc, argv, "p:b:")) != -1)
 	{
 		switch (opt)
 		{
@@ -75,10 +80,53 @@ int main(int argc, char* argv[])
 				break;
 				
 			case 'b':
+			default:
+				break;
+		}
+	}*/
+	
+	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	
+	if (sockfd < 0)
+	{
+		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+	
+	if (bind(sockfd, (struct sockaddr*) &thisNode.endpoint, sizeof(struct sockaddr_in)) < 0)
+	{
+		perror("bind");
+		exit(EXIT_FAILURE);
+	}
+	
+	while ((opt = getopt(argc, argv, "p:b:")) != -1)
+	{
+		switch (opt)
+		{
+			case 'p':
+				break;
 				
+			case 'b':
+				msg.message = VERIFY;
+				msg.localID = thisNode.nodeID;
+				msg.payloadsize = 0;
+				underlink_message_dump(&msg);
+				
+				inet_pton(AF_INET, optarg, &remote);
+				
+				int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(underlink_message), 0, (struct sockaddr*) &remote, addrlen);
+				
+				if (sentlen <= 0)
+				{
+					fprintf(stderr, "Socket error when attempting to send to ");
+					printNodeIPAddress(stderr, &msg.remoteID);
+					fprintf(stderr, ":\n -> ");
+					perror("sendto");
+				}
+				break;
 				
 			default:
-				fprintf(stderr, "Usage: %s [-p port] [-o] [-d] [-r]\n", argv[0]);
+				fprintf(stderr, "Usage: %s [-p port]\n", argv[0]);
 				exit(EXIT_FAILURE);
 		}
 	}
@@ -92,21 +140,6 @@ int main(int argc, char* argv[])
 		printf("%lu-bit peer address space\n", sizeof(underlink_nodeID) * 8);
 		printf("Bucket table size in memory: %lukb\n",
 			(sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET) / 24);
-	}
-	
-	srand(time(NULL));
-	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	
-	if (sockfd < 0)
-	{
-		perror("socket");
-		exit(EXIT_FAILURE);
-	}
-	
-	if (bind(sockfd, (struct sockaddr*) &thisNode.endpoint, sizeof(struct sockaddr_in)) < 0)
-	{
-		perror("bind");
-		exit(EXIT_FAILURE);
 	}
 	
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
@@ -266,22 +299,65 @@ int main(int argc, char* argv[])
 		
 		if (FD_ISSET(sockfd, &selectlist) != 0)
 		{
-			struct underlink_message* message = (underlink_message*) &buffer;
-			memset(&buffer, 0, MTU);
-			long readvalue = read(sockfd, &buffer, MTU);
+			underlink_message message;
+			memset(&msg, 0, sizeof(underlink_message));
+			long readvalue = recvfrom(sockfd, &message, MTU, 0, (void*) &remote, &addrlen);
+			underlink_message_dump(&message);
 			
-			if (memcmp(&message->remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
+			switch (message.message)
 			{
-				if (write(tuntapfd, message->packetbuffer, message->payloadsize) <= 0)
-				{
-					fprintf(stderr, "TUN/TAP error when attempting to write to adapter: ");
-					perror("write");
-					fprintf(stderr, "\n");
-				}
+				case IPPACKET:
+					if (memcmp(&message.remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
+					{
+						if (write(tuntapfd, message.packetbuffer, message.payloadsize) <= 0)
+						{
+							fprintf(stderr, "TUN/TAP error when attempting to write to adapter: ");
+							perror("write");
+							fprintf(stderr, "\n");
+						}
+					}
+					else
+					{
+						sendIPPacket(message.packetbuffer, message.payloadsize, message.remoteID, message.localID, 0);
+					}
+					break;
+				
+				case FORWARDED_REFER:
+					msg.message = VERIFY;
+					msg.localID = thisNode.nodeID;
+					msg.remoteID = message.node.nodeID;
+					msg.payloadsize = 0;
+					underlink_message_dump(&msg);
+					break;
+					
+				case VERIFY:
+					msg.message = VERIFY_SUCCESS;
+					msg.localID = thisNode.nodeID;
+					msg.remoteID = message.localID;
+					msg.payloadsize = sizeof(underlink_node);
+					memcpy(&msg.node, &thisNode, msg.payloadsize);
+					underlink_message_dump(&msg);
+					break;
+					
+				case VERIFY_SUCCESS:
+					addNodeToBuckets(message.node);
+					break;
+					
+				case NOT_FORWARDED:
+					break;
 			}
-				else
+			
+			if (msg.localID.big == 0 && msg.localID.small == 0)
+				continue;
+			
+			int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(underlink_message), 0, (struct sockaddr*) &remote, addrlen);
+			
+			if (sentlen <= 0)
 			{
-				sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
+				fprintf(stderr, "Socket error when attempting to send to ");
+				printNodeIPAddress(stderr, &msg.remoteID);
+				fprintf(stderr, ":\n -> ");
+				perror("sendto");
 			}
 		}
 	}

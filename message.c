@@ -5,59 +5,9 @@
 #include "node.h"
 #include "message.h"
 
-int underlink_message_addnode(underlink_message* packet, underlink_node* node)
-{
-	if (packet == 0)
-		return -1;
-
-	underlink_nodelist* kp;
-	if (&packet->payloadsize != 0)
-		kp = (underlink_nodelist*) &packet->nodes;
-
-	int i;
-	for (i = 0; i < packet->payloadsize; i ++)
-		kp = (underlink_nodelist*) &kp->next;
-
-	memcpy(&kp->node, node, sizeof(struct underlink_node));
-	
-	packet->payloadsize ++;
-
-	return 0;
-}
-
-int underlink_message_getkey(underlink_message* packet, void* output, int key)
-{
-	underlink_nodelist* kp;
-	if (packet->payloadsize == 0)
-		return;
-
-	kp = (underlink_nodelist*) &packet->payloadsize;
-
-	int i;
-	for (i = 0; i < packet->payloadsize; i ++)
-	{
-		if (i == key)
-		{
-			memcpy(output, kp->node, sizeof(kp->node));
-			return sizeof(kp->node);
-		}
-
-		if (&kp->next != 0)
-			kp = (underlink_nodelist*) &kp->next;
-		else   
-			break;
-	}
-
-	return 0;
-}
-
 int underlink_message_pack(void* out, underlink_message* packet)
 {
-	int size;
-	if (packet->message == CONTROL)
-		size = sizeof(underlink_message) + (sizeof(underlink_nodelist) * packet->payloadsize);
-	else
-		size = sizeof(underlink_message) + packet->payloadsize;
+	int size = sizeof(underlink_message) + packet->payloadsize;
 	
 	memcpy(out, packet, size);
 	return size;
@@ -78,12 +28,6 @@ void underlink_message_dump(underlink_message* packet)
 	printNodeIPAddress(stdout, &packet->remoteID);
 	printf("\n");
 
-	underlink_nodelist* kp;
-	if (&packet->nodes == 0)
-		return;
-
-	kp = (underlink_nodelist*) &packet->nodes;
-
 	if (packet->message == IPPACKET)
 	{
 		printf("\tPacket contents:\n\t");
@@ -103,27 +47,6 @@ void underlink_message_dump(underlink_message* packet)
 		printf("\n");
 		
 		return;
-	}
-
-	int i;
-	for (i = 0; i < packet->payloadsize; i ++)
-	{
-		if (&kp->node != 0)
-		{
-			underlink_node* node = (struct underlink_node*) &kp->node;
-			char addr[64];
-			inet_ntop(AF_INET, &node->endpoint.sin_addr, addr, 64);
-			
-		//	printf("\tNode %i: %s (%s:%i)\n", i + 1, node->nodeID, addr,
-		//			ntohs(node->endpoint.sin_port));
-		}
-		//else
-		//	printf("\tNode %i: (undefined)\n", i + 1);
-
-		if (&kp->next != 0)
-			kp = (underlink_nodelist*) &kp->next;
-		else
-			break;
 	}
 }
 

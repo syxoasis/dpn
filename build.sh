@@ -48,4 +48,4 @@ gcc -g 		main.o \
 			lib/randombytes.o \
 				-o underlink
 
-./underlink
+./underlink -b 127.0.0.1
