@@ -8,7 +8,6 @@
 int underlink_message_pack(void* out, underlink_message* packet)
 {
 	int size = sizeof(underlink_message) + packet->payloadsize;
-	
 	memcpy(out, packet, size);
 	return size;
 }
@@ -19,6 +18,22 @@ int underlink_message_unpack(underlink_message* out, void* buffer, int buffersiz
 	return buffersize;
 }
 
+void underlink_message_makeLittleEndian(underlink_message* msg)
+{
+	msg->message = ntohl(msg->message);
+	uint128_makeLittleEndian(&msg->localID);
+	uint128_makeLittleEndian(&msg->remoteID);
+	msg->payloadsize = ntohl(msg->payloadsize);
+}
+
+void underlink_message_makeBigEndian(underlink_message* msg)
+{
+	msg->message = htonl(msg->message);
+	uint128_makeBigEndian(&msg->localID);
+	uint128_makeBigEndian(&msg->remoteID);
+	msg->payloadsize = htonl(msg->payloadsize);
+}
+
 void underlink_message_dump(underlink_message* packet)
 {
 	printf("Message ID: 0x%X, payload size: %i\n", packet->message, packet->payloadsize);
@@ -27,26 +42,35 @@ void underlink_message_dump(underlink_message* packet)
 	printf(" -> Remote ");
 	printNodeIPAddress(stdout, &packet->remoteID);
 	printf("\n");
-
-	if (packet->message == IPPACKET)
+	
+	printf("\tPacket type: ");
+	switch (packet->message)
 	{
-		printf("\tPacket contents:\n\t");
-		
-		int s;
-		for (s = 0; s < packet->payloadsize; s ++)
-		{
-			if (s % 8 == 0)
-				printf("%03i-%03i: ", s, s + 7);
-			
-			printf("%08x ", packet->packetbuffer[s]);
-
-			if (s % 8 == 7)
-			 	printf("\n\t");
-		}
-		
-		printf("\n");
-		
-		return;
+		case IPPACKET:			printf("IP packet\n"); break;
+		case FORWARDED_REFER:	printf("Forwarded refer\n"); break;
+		case NOT_FORWARDED:		printf("Not forwarded\n"); break;
+		case VERIFY:			printf("Verify\n"); break;
+		case VERIFY_SUCCESS:	printf("Verify success\n"); break;
+		case UNSPEC_ERROR:		printf("Unspecified error\n"); break;
 	}
+
+	if (packet->payloadsize == 0)
+		return;
+	
+	printf("\tPacket contents:\n\t");
+		
+	int s;
+	for (s = 0; s < packet->payloadsize; s ++)
+	{
+		if (s % 8 == 0)
+			printf("%03i-%03i: ", s, s + 7);
+			
+		printf("%08x ", packet->packetbuffer[s]);
+
+		if (s % 8 == 7)
+		 	printf("\n\t");
+	}
+		
+	printf("\n");
 }
 

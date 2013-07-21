@@ -68,24 +68,6 @@ int main(int argc, char* argv[])
 	inet_pton(AF_INET, "0.0.0.0", &thisNode.endpoint.sin_addr);
 	thisNode.endpoint.sin_port = htons(portnumber);
 	
-	/*while ((opt = getopt(argc, argv, "p:b:")) != -1)
-	{
-		switch (opt)
-		{
-			case 'p':
-				if (atoi(optarg) <= 65535)
-				{
-					portnumber = atoi(optarg);
-					thisNode.endpoint.sin_port = htons(portnumber);
-				}
-				break;
-				
-			case 'b':
-			default:
-				break;
-		}
-	}*/
-	
 	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	
 	if (sockfd < 0)
@@ -340,7 +322,7 @@ int main(int argc, char* argv[])
 				case VERIFY:
 					msg.message = VERIFY_SUCCESS;
 					msg.localID = thisNode.nodeID;
-					msg.remoteID = message.localID;
+					msg.remoteID = message.localID;					
 					msg.payloadsize = sizeof(underlink_node);
 					memcpy(&msg.node, &thisNode, msg.payloadsize);
 					underlink_message_dump(&msg);
