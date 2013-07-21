@@ -59,8 +59,8 @@ int main(int argc, char* argv[])
 	getNodeIDFromKey(&thisNode.nodeID, localPublicKey);
 	
 	thisNode.endpoint.sin_family = AF_INET;
-	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
-	thisNode.routermode = DIRECT_ONLY;
+	inet_pton(AF_INET, "0.0.0.0", &thisNode.endpoint.sin_addr);
+	thisNode.routermode = ROUTER;
 	thisNode.endpoint.sin_port = htons(portnumber);
 	
 	while ((opt = getopt(argc, argv, "p:odr")) != -1)
@@ -238,7 +238,8 @@ int main(int argc, char* argv[])
 			struct in6_addr* src_addr = &headers->ip6_src;
 			struct in6_addr* dst_addr = &headers->ip6_dst;
 			
-			if (dst_addr->s6_addr[0] == 0xFD) continue;
+			//if (dst_addr->s6_addr[0] == 0xFD)
+			//	continue;
 		
 			struct underlink_node source, destination;
 			memcpy((void*) &source.nodeID, (void*) &src_addr->s6_addr, sizeof(underlink_nodeID));
@@ -252,9 +253,10 @@ int main(int argc, char* argv[])
 					printNodeIPAddress(stderr, source);
 					fprintf(stderr, "\n");
 				}
+				
 				continue;
 			}
-							
+						
 			sendIPPacket(buffer, readvalue, source, destination, headers);
 		}
 		
@@ -278,15 +280,19 @@ int main(int argc, char* argv[])
 			{
 				if (thisNode.routermode == ROUTER || memcmp(&message->remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
 					sendIPPacket(message->packetbuffer, message->payloadsize, message->remoteID, message->localID, 0);
-				//else
-				//	fprintf(stderr, "Packet discarded: illegal attempt to route for node %llu\n", message->remoteID);
+				else
+				{
+					fprintf(stderr, "Packet discarded: illegal attempt to route for node ");
+					printNodeIPAddress(stderr, message->remoteID);
+					fprintf(stderr, "\n");
+				}
 			}
 		}
 	}
 }
 
 int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink_node destination, struct ip6_hdr* headers)
-{		
+{
 	underlink_node closest;
 	memset(&closest, 0, sizeof(char) * 16);
 
@@ -294,13 +300,17 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 
 	if (closest.nodeID.big == 0 && closest.nodeID.small)
 	{
-		//fprintf(stderr, "Remote node %llu is not accessible; no intermediate router known\n", destination.nodeID);
+		fprintf(stderr, "Remote node ");
+		printNodeIPAddress(stderr, destination.nodeID);
+		fprintf(stderr, " is not accessible; no intermediate router known\n");
 		return -1;
 	}
 
 	if (closest.endpoint.sin_addr.s_addr == 0)
 	{
-		//fprintf(stderr, "Packet discarded: node %llu has no remote endpoint\n", closest.nodeID);
+		fprintf(stderr, "Packet discarded: node ");
+		printNodeIPAddress(stderr, destination.nodeID);
+		fprintf(stderr, " has no remote endpoint\n");
 		return -1;
 	}
 		
@@ -309,14 +319,21 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 	memcpy(&msg->packetbuffer, &buffer, length);
 	int sendsize = underlink_message_pack(sendbuffer, msg);
 	
-	//if (debug)
-	//	printf("Sending %lu bytes to node 0x%08llX via 0x%08llX\n", length, htonll(destination.nodeID), htonll(closest.nodeID));
-
+	if (debug)
+	{
+		fprintf(stderr, "Sending %lu bytes to node ", length);
+		printNodeIPAddress(stderr, destination.nodeID);
+		fprintf(stderr, " via ");
+		printNodeIPAddress(stderr, closest.nodeID);
+		fprintf(stderr, "\n");
+	}
+		
 	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) == -1)
 	{
-		//fprintf(stderr, "Socket error when attempting to send to %llu: ", closest.nodeID);
+		fprintf(stderr, "Socket error when attempting to send to ");
+		printNodeIPAddress(stderr, closest.nodeID);
+		fprintf(stderr, ":\n -> ");
 		perror("sendto");
-		//fprintf(stderr, "\n");
 	}
 	
 	free(sendbuffer);

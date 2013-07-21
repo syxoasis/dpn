@@ -30,6 +30,12 @@ int uint128_equals(uint128_t a, uint128_t b)
 	return a.small == b.small && a.big == b.big;
 }
 
+int uint128_maskequals(uint128_t a, uint128_t ma, uint128_t b, uint128_t mb)
+{
+	return (a.small & ma.small) == (b.small & mb.small) &&
+	       (a.big & ma.big) == (b.big & mb.big);
+}
+
 void uint128_replace(uint128_t* a, uint128_t b)
 {
 	a->big = b.big;
