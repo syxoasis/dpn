@@ -13,7 +13,7 @@ uint128_t getDistance(underlink_node one, underlink_node two)
 void printNodeIPAddress(FILE* pipe, underlink_node node)
 {
 	char presentational[164];
-	memset(&presentational, 0, 128);
-	inet_ntop(AF_INET6, &node.nodeID, &presentational, 128);
+	memset(&presentational, 0, 164);
+	inet_ntop(AF_INET6, &node.nodeID, &presentational, 164);
 	fprintf(pipe, "%s", presentational);
 }

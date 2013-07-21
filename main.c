@@ -200,23 +200,23 @@ int main(int argc, char* argv[])
 		#endif
 	}
 	
+	char buffer[MTU];
+	struct ip6_hdr* headers = (struct ip6_hdr*) &buffer;
+	struct in6_addr* src_addr = &headers->ip6_src;
+	struct in6_addr* dst_addr = &headers->ip6_dst;
+	
 	while (1)
-	{
+	{		
 		FD_ZERO(&selectlist);
-		if (thisNode.routermode != ORCHESTRATOR)
-			FD_SET(tuntapfd, &selectlist);
+		FD_SET(tuntapfd, &selectlist);
 		FD_SET(sockfd, &selectlist);
 		
 		int nfds;
-		if (thisNode.routermode != ORCHESTRATOR)
-			nfds = max(tuntapfd, sockfd);
-		else
-			nfds = sockfd;
-		nfds ++;
+		nfds = max(tuntapfd, sockfd) + 1;
 		
 		int len = select(nfds, &selectlist, NULL, NULL, 0);
 
-		if (len < 0)
+		if (len <= 0)
 		{
 			perror("select");
 			return -1;
@@ -224,9 +224,11 @@ int main(int argc, char* argv[])
 		
 		if (FD_ISSET(tuntapfd, &selectlist) != 0)
 		{
-			char buffer[MTU];
+			memset(&buffer, 0, MTU);
+			
+			printf("-\n");
+			
 			long readvalue = read(tuntapfd, &buffer, MTU);
-			struct ip6_hdr* headers = (struct ip6_hdr*) &buffer;
 			
 			if (readvalue < 0)
 			{
@@ -234,21 +236,18 @@ int main(int argc, char* argv[])
 				return -1;
 			}
 			
-			struct in6_addr* src_addr = &headers->ip6_src;
-			struct in6_addr* dst_addr = &headers->ip6_dst;
-			
-			if (dst_addr->s6_addr[0] != 0xFD)
-				continue;
-			
-			printf("Source address: ");
-			printNodeIPAddress(stdout, src_addr);
-			printf("\nDestination address: ");
-			printNodeIPAddress(stdout, dst_addr);
-			printf("\n");
+		//	if (dst_addr->s6_addr[0] != 0xFD)
+		//		continue;
 		
 			struct underlink_node source, destination;
 			memcpy((void*) &source.nodeID, (void*) &src_addr->s6_addr, sizeof(underlink_nodeID));
 			memcpy((void*) &destination.nodeID, (void*) &dst_addr->s6_addr, sizeof(underlink_nodeID));
+			
+			printf("Source address: ");
+			printNodeIPAddress(stdout, &src_addr);
+			printf("\nDestination address: ");
+			printNodeIPAddress(stdout, &dst_addr);
+			printf("\n");
 			
 			if (memcmp(&src_addr->s6_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
 			{
@@ -268,7 +267,6 @@ int main(int argc, char* argv[])
 		if (FD_ISSET(sockfd, &selectlist) != 0)
 		{
 			continue;
-			char buffer[MTU];
 			struct underlink_message* message = (underlink_message*) &buffer;
 			
 			long readvalue = read(sockfd, &buffer, MTU);
