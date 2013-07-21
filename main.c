@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
 		getNodeIDFromKey(&n.nodeID, pk);
 		
 		n.endpoint.sin_family = AF_INET;
-		inet_pton(AF_INET, "127.0.0.1", &n.endpoint.sin_addr);
+		inet_pton(AF_INET, "192.168.0.1", &n.endpoint.sin_addr);
 		n.endpoint.sin_port = htons(3456);
 		proto_init(n.crypto);
 		addNodeToBuckets(n);
@@ -137,9 +137,22 @@ int main(int argc, char* argv[])
 	printf("/8\n");
 
 	#ifdef __linux__
-		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
+		struct ifreq ifr;
+		memset(&ifr, 0, sizeof(ifr));
+	
+		if ((tuntap->baseintf.filedesc = open("/dev/net/tun", O_RDWR)) < 0)
 		{
 			fprintf(stderr, "Unable to find /dev/net/tun\n");
+			return -1;
+		}
+	
+		strcpy(ifr.ifr_name, tuntap->nodename);
+		ifr.ifr_flags = IFF_TUN;
+		ifr.ifr_flags |= IFF_NO_PI;
+	
+		if (ioctl(tuntap->baseintf.filedesc, TUNSETIFF, (void *) &ifr) < 0)
+		{
+			fprintf(stderr, "Unable to configure tuntap device\n");
 			return -1;
 		}
 	#else
@@ -230,12 +243,12 @@ int main(int argc, char* argv[])
 			}
 						
 			sendIPPacket(buffer, readvalue, source, destination, headers);
+			continue;
 		}
 		
 		if (FD_ISSET(sockfd, &selectlist) != 0)
 		{
 			struct underlink_message* message = (underlink_message*) &buffer;
-			
 			memset(&buffer, 0, MTU);
 			long readvalue = read(sockfd, &buffer, MTU);
 			
@@ -283,16 +296,17 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		fprintf(stderr, " has no remote endpoint\n");
 		return -1;
 	}
-		
+
 	struct underlink_message* msg = underlink_message_construct(IPPACKET, thisNode.nodeID, closest.nodeID, length);
-	char* sendbuffer = calloc(1, MTU);
-	memcpy(&msg->packetbuffer, &buffer, MTU);
-	int sendsize = underlink_message_pack(sendbuffer, msg);
+	//printf("1. Allocate length %i\n", length);
+	memcpy(&msg->packetbuffer, &buffer, length);
+	//memset(&msg->packetbuffer, 0, length);
 	
-	printf("sizeof(underlink_message): %i\n", sizeof(underlink_message));
-	printf("length: %i\n", length);
-	printf("sendsize: %i\n", sendsize);
-	printf("sendlength: %i\n", length + sizeof(underlink_message));
+	char* sendbuffer = calloc(1, MTU + sizeof(underlink_message));
+	int sendsize = underlink_message_pack(sendbuffer, msg);
+	//printf("2. Send size returned from pack is %i\n", sendsize);
+	
+	underlink_message_dump(msg);
 	
 	if (debug)
 	{
@@ -303,13 +317,17 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 		fprintf(stderr, "\n");
 	}
 		
-	if (sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint)) <= 0)
+	int sentlen = sendto(sockfd, sendbuffer, sendsize, 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint));
+	
+	if (sentlen <= 0)
 	{
 		fprintf(stderr, "Socket error when attempting to send to ");
 		printNodeIPAddress(stderr, &closest.nodeID);
 		fprintf(stderr, ":\n -> ");
 		perror("sendto");
 	}
+		else
+	printf("Written %i bytes to UDP\n", sentlen);
 	
 	free(sendbuffer);
 	free(msg);
