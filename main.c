@@ -138,6 +138,9 @@ int main(int argc, char* argv[])
 
 	#ifdef __linux__
 		struct ifreq ifr;
+		struct sockaddr_in6 sai;
+		int conffd;
+		struct in6_ifreq ifr6;
 		memset(&ifr, 0, sizeof(ifr));
 	
 		if ((tuntapfd = open("/dev/net/tun", O_RDWR)) < 0)
@@ -154,17 +157,49 @@ int main(int argc, char* argv[])
 			fprintf(stderr, "Unable to configure tuntap device\n");
 			return -1;
 		}
+		
+		conffd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_IP);
+	
+		if (conffd < 0)
+		{
+			perror("socket");
+			return -1;
+		}
+
+		memset(&sai, 0, sizeof(struct sockaddr));
+		sai.sin6_family = AF_INET6;
+		sai.sin6_port = 0;
+	
+		if (inet_pton(AF_INET6, prefix, (void*) &sai.sin6_addr) <= 0)
+		{
+			perror("inet_pton");
+			return -1;
+		}
+	
+		memcpy((char*) &ifr6.ifr6_addr, (char*) &prefix, sizeof(struct in6_addr));
+	
+		if (ioctl(conffd, SIOGIFINDEX, &ifr) < 0)
+			perror("SIOGIFINDEX");
+	
+		ifr6.ifr6_ifindex = ifr.ifr_ifindex;
+		ifr6.ifr6_prefixlen = 8;
+	
+		if (ioctl(conffd, SIOCSIFADDR, &ifr6) < 0)
+			perror("SIOCSIFADDR");
+	
+		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+	
+		int ret = ioctl(conffd, SIOCSIFFLAGS, &ifr);
+		printf("ret: %d\n", ret);
+	
+		close(conffd);
 	#else
 		if ((tuntapfd = open(nodename, O_RDWR)) < 0)
 		{
 			fprintf(stderr, "Unable to open tuntap device '%s'\n", nodename);
 			return -1;
 		}
-	#endif
-		
-	#ifdef __linux__
-		fprintf(stderr, "Please set interface prefix manually using ip -6 addr add\n");
-	#else
+
 		struct in6_aliasreq addreq6;
 		memset(&addreq6, 0, sizeof(addreq6));
 		sprintf(addreq6.ifra_name, "tun0");
