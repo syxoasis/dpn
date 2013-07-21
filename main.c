@@ -54,6 +54,7 @@ int main(int argc, char* argv[])
 	
 	underlink_message msg;
 	struct sockaddr_in remote;
+	remote.sin_family = AF_INET;
 	socklen_t addrlen = sizeof(remote);
 	
 	memset(&msg, 0, sizeof(underlink_message));
@@ -99,13 +100,10 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 	
-	while ((opt = getopt(argc, argv, "p:b:")) != -1)
+	while ((opt = getopt(argc, argv, "b:")) != -1)
 	{
 		switch (opt)
 		{
-			case 'p':
-				break;
-				
 			case 'b':
 				msg.message = VERIFY;
 				msg.localID = thisNode.nodeID;
@@ -113,20 +111,22 @@ int main(int argc, char* argv[])
 				underlink_message_dump(&msg);
 				
 				inet_pton(AF_INET, optarg, &remote);
+				remote.sin_family = AF_INET;
 				
 				int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(underlink_message), 0, (struct sockaddr*) &remote, addrlen);
 				
 				if (sentlen <= 0)
 				{
-					fprintf(stderr, "Socket error when attempting to send to ");
-					printNodeIPAddress(stderr, &msg.remoteID);
-					fprintf(stderr, ":\n -> ");
+					char foo[128];
+					inet_ntop(AF_INET, &remote, &foo, 128);
+					
+					fprintf(stderr, "Socket error when attempting to send bootstrap message to %s:\n -> ", foo);
 					perror("sendto");
 				}
 				break;
 				
 			default:
-				fprintf(stderr, "Usage: %s [-p port]\n", argv[0]);
+				fprintf(stderr, "Usage: %s [-b bootstrap ip]\n", argv[0]);
 				exit(EXIT_FAILURE);
 		}
 	}
@@ -340,6 +340,7 @@ int main(int argc, char* argv[])
 					break;
 					
 				case VERIFY_SUCCESS:
+					message.node.endpoint = remote;
 					addNodeToBuckets(message.node);
 					break;
 					
