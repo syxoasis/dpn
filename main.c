@@ -308,14 +308,10 @@ int main(int argc, char* argv[])
 					}
 						else
 					{
-						if (uint128_equals(thisNode.nodeID, message.localID))
-							break;
-						
-						if (message.remoteID.big == 0 && message.remoteID.small == 0)
-							break;
-						
-						if (message.localID.big == 0 && message.localID.small == 0)
-							break;
+						if (uint128_equals(thisNode.nodeID, message.localID)) break;
+						if (uint128_equals(thisNode.nodeID, message.remoteID)) break;
+						if (message.remoteID.big == 0 && message.remoteID.small == 0) break;
+						if (message.localID.big == 0 && message.localID.small == 0) break;
 						
 						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID);
 					}
