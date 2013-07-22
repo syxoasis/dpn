@@ -308,7 +308,7 @@ int main(int argc, char* argv[])
 					}
 					else
 					{
-						sendIPPacket(message.packetbuffer, message.payloadsize, message.remoteID, message.localID, 0);
+						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID, 0);
 					}
 					break;
 				
