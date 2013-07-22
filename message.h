@@ -18,6 +18,7 @@ typedef struct underlink_message
 	int payloadsize;
 	underlink_nodeID localID;
 	underlink_nodeID remoteID;
+	int ttl;
 	union
 	{
 		char packetbuffer[MTU];

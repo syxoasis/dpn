@@ -36,7 +36,7 @@ void underlink_message_makeBigEndian(underlink_message* msg)
 
 void underlink_message_dump(underlink_message* packet)
 {
-	printf("Message ID: 0x%X, payload size: %i\n", packet->message, packet->payloadsize);
+	printf("Message ID: 0x%X, payload size: %i, time-to-live: %i\n", packet->message, packet->payloadsize, packet->ttl);
 	printf("\tLocal ");
 	printNodeIPAddress(stdout, &packet->localID);
 	printf(" -> Remote ");

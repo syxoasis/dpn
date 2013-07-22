@@ -92,6 +92,7 @@ int main(int argc, char* argv[])
 				msg.message = VERIFY;
 				msg.localID = thisNode.nodeID;
 				msg.payloadsize = sizeof(underlink_node);
+				msg.ttl = 1;
 				memcpy(&msg.node, &thisNode, msg.payloadsize);
 				underlink_message_dump(&msg);
 				
@@ -255,6 +256,7 @@ int main(int argc, char* argv[])
 		if (FD_ISSET(tuntapfd, &selectlist) != 0)
 		{
 			memset(&buffer, 0, MTU);
+			memset(&msg, 0, sizeof(underlink_message));
 			long readvalue = read(tuntapfd, &buffer, MTU);
 			
 			if (readvalue < 0)
@@ -283,7 +285,7 @@ int main(int argc, char* argv[])
 				continue;
 			}
 						
-			sendIPPacket(buffer, readvalue, source.nodeID, destination.nodeID);
+			sendIPPacket(buffer, readvalue, source.nodeID, destination.nodeID, headers->ip6_hlim);
 			continue;
 		}
 		
@@ -312,7 +314,11 @@ int main(int argc, char* argv[])
 						if (uint128_equals(thisNode.nodeID, message.remoteID)) break;
 						if (message.remoteID.big == 0 && message.remoteID.small == 0) break;
 						if (message.localID.big == 0 && message.localID.small == 0) break;
-						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID);
+						if ((-- message.ttl) == 0) break;
+						
+						msg = message;
+						
+						//sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID);
 					}
 					break;
 				
@@ -321,6 +327,7 @@ int main(int argc, char* argv[])
 					msg.localID = thisNode.nodeID;
 					msg.remoteID = message.node.nodeID;
 					msg.payloadsize = 0;
+					msg.ttl = 1;
 					break;
 					
 				case VERIFY:
@@ -330,6 +337,7 @@ int main(int argc, char* argv[])
 					msg.localID = thisNode.nodeID;
 					msg.remoteID = message.localID;					
 					msg.payloadsize = sizeof(underlink_node);
+					msg.ttl = 1;
 					memcpy(&msg.node, &thisNode, msg.payloadsize);
 					break;
 					
@@ -358,7 +366,7 @@ int main(int argc, char* argv[])
 	}
 }
 
-int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underlink_nodeID destination)
+int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underlink_nodeID destination, int ttl)
 {
 	underlink_node closest;
 	memset(&closest, 0, sizeof(char) * 16);
@@ -383,19 +391,12 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		return -1;
 	}
 	
-	if (uint128_equals(source, closest.nodeID))
-	{
-		fprintf(stderr, "Packet discarded: loop alert, cannot reach ");
-		printNodeIPAddress(stderr, &destination);
-		fprintf(stderr, " without sending back to source\n");
-		return -1;
-	}
-	
 	underlink_message msg;
 	msg.message = IPPACKET;
 	uint128_replace(&msg.localID, thisNode.nodeID);
 	uint128_replace(&msg.remoteID, destination);
 	msg.payloadsize = length;
+	msg.ttl = ttl;
 	memcpy(msg.packetbuffer, buffer, length);
 	
 	if (debug)

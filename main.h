@@ -14,4 +14,4 @@
 #define htonll(x) ntohll(x)
 
 // Prototypes
-int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underlink_nodeID destination);
+int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underlink_nodeID destination, int ttl);
