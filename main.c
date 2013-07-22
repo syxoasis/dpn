@@ -378,14 +378,6 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 	{
 		closest = getClosestAddressFromBuckets(dst, i);
 		
-		if (closest.nodeID.big == 0 && closest.nodeID.small == 0)
-		{
-			fprintf(stderr, "Remote node ");
-			printNodeIPAddress(stderr, &destination);
-			fprintf(stderr, " is not accessible; no intermediate router known\n");
-			return -1;
-		}
-		
 		if (closest.endpoint.sin_addr.s_addr == 0)
 			continue;
 		
@@ -393,6 +385,14 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 			continue;
 		
 		break;
+	}
+	
+	if (closest.nodeID.big == 0 && closest.nodeID.small == 0)
+	{
+		fprintf(stderr, "Remote node ");
+		printNodeIPAddress(stderr, &destination);
+		fprintf(stderr, " is not accessible; no intermediate router known\n");
+		return -1;
 	}
 	
 	if (closest.endpoint.sin_addr.s_addr == 0)
