@@ -378,7 +378,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 	{
 		closest = getClosestAddressFromBuckets(dst, i);
 		
-		if (i == 0 && closest.nodeID.big == 0 && closest.nodeID.small == 0)
+		if (closest.nodeID.big == 0 && closest.nodeID.small == 0)
 		{
 			fprintf(stderr, "Remote node ");
 			printNodeIPAddress(stderr, &destination);
