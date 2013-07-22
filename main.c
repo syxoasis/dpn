@@ -332,7 +332,7 @@ int main(int argc, char* argv[])
 					break;
 					
 				case VERIFY_SUCCESS:
-					message.node.endpoint = remote;
+					memcpy(&message.node.endpoint, &remote, sizeof(struct sockaddr_in));
 					addNodeToBuckets(message.node);
 					break;
 					
@@ -382,7 +382,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 	underlink_message msg;
 	msg.message = IPPACKET;
 	msg.localID = thisNode.nodeID;
-	msg.remoteID = closest.nodeID;
+	msg.remoteID = destination.nodeID;
 	msg.payloadsize = length;
 	memcpy(msg.packetbuffer, buffer, length);
 	
