@@ -383,7 +383,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		return -1;
 	}
 	
-	if (uint128_equals(source.nodeID, closest.nodeID))
+	if (uint128_equals(source, closest.nodeID))
 	{
 		fprintf(stderr, "Packet discarded: loop alert, cannot reach ");
 		printNodeIPAddress(stderr, &destination);
