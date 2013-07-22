@@ -312,7 +312,6 @@ int main(int argc, char* argv[])
 						if (uint128_equals(thisNode.nodeID, message.remoteID)) break;
 						if (message.remoteID.big == 0 && message.remoteID.small == 0) break;
 						if (message.localID.big == 0 && message.localID.small == 0) break;
-						
 						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID);
 					}
 					break;
@@ -381,6 +380,14 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		fprintf(stderr, "Packet discarded: node ");
 		printNodeIPAddress(stderr, &destination);
 		fprintf(stderr, " has no remote endpoint\n");
+		return -1;
+	}
+	
+	if (uint128_equals(source.nodeID, closest.nodeID))
+	{
+		fprintf(stderr, "Packet discarded: loop alert, cannot reach ");
+		printNodeIPAddress(stderr, &destination);
+		fprintf(stderr, " without sending back to source\n");
 		return -1;
 	}
 	
