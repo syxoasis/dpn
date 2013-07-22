@@ -96,8 +96,14 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 int addNodeToBuckets(underlink_node newnode)
 {
 	int b = getBucketID(newnode);
-	
 	int n;
+	
+	for (n = 0; n < NODES_PER_BUCKET; n ++)
+	{
+		if (uint128_equals(buckets[b][n].nodeID, thisNode.nodeID))
+			return b;
+	}
+	
 	for (n = 0; n < NODES_PER_BUCKET; n ++)
 	{
 		if (buckets[b][n].nodeID.big == 0 && buckets[b][n].nodeID.small == 0)
