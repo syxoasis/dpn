@@ -391,7 +391,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 	underlink_message msg;
 	msg.message = IPPACKET;
 	uint128_replace(&msg.localID, thisNode.nodeID);
-	uint128_replace(&)msg.remoteID, destination.nodeID);
+	uint128_replace(&msg.remoteID, destination.nodeID);
 	msg.payloadsize = length;
 	memcpy(msg.packetbuffer, buffer, length);
 	
