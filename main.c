@@ -268,8 +268,8 @@ int main(int argc, char* argv[])
 				continue;
 		
 			struct underlink_node source, destination;
-			memcpy((void*) &source.nodeID, src_addr->s6_addr, sizeof(underlink_nodeID));
-			memcpy((void*) &destination.nodeID, dst_addr->s6_addr, sizeof(underlink_nodeID));
+			memcpy((void*) &source.nodeID, src_addr, sizeof(underlink_nodeID));
+			memcpy((void*) &destination.nodeID, dst_addr, sizeof(underlink_nodeID));
 			
 			if (memcmp(&src_addr->s6_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
 			{
@@ -297,7 +297,6 @@ int main(int argc, char* argv[])
 			switch (message.message)
 			{
 				case IPPACKET:
-					//if (memcmp(&message.remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
 					if (uint128_equals(message.remoteID, thisNode.nodeID))
 					{
 						if (write(tuntapfd, message.packetbuffer, message.payloadsize) <= 0)
