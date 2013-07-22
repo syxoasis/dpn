@@ -298,7 +298,7 @@ int main(int argc, char* argv[])
 			switch (message.message)
 			{
 				case IPPACKET:
-					if (uint128_equals(message.remoteID, thisNode.nodeID))
+					if (memcmp(&src_addr->s6_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
 					{
 						if (write(tuntapfd, message.packetbuffer, message.payloadsize) <= 0)
 						{
