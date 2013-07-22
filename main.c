@@ -297,7 +297,8 @@ int main(int argc, char* argv[])
 			switch (message.message)
 			{
 				case IPPACKET:
-					if (memcmp(&message.remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
+					//if (memcmp(&message.remoteID, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
+					if (uint128_equals(message.remoteID, thisNode.nodeID))
 					{
 						if (write(tuntapfd, message.packetbuffer, message.payloadsize) <= 0)
 						{
@@ -306,7 +307,7 @@ int main(int argc, char* argv[])
 							fprintf(stderr, "\n");
 						}
 					}
-					else
+						else
 					{
 						if (uint128_equals(thisNode.nodeID, message.localID))
 							break;
@@ -326,7 +327,6 @@ int main(int argc, char* argv[])
 					msg.localID = thisNode.nodeID;
 					msg.remoteID = message.node.nodeID;
 					msg.payloadsize = 0;
-					underlink_message_dump(&msg);
 					break;
 					
 				case VERIFY:
@@ -337,7 +337,6 @@ int main(int argc, char* argv[])
 					msg.remoteID = message.localID;					
 					msg.payloadsize = sizeof(underlink_node);
 					memcpy(&msg.node, &thisNode, msg.payloadsize);
-					underlink_message_dump(&msg);
 					break;
 					
 				case VERIFY_SUCCESS:
