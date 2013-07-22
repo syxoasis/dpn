@@ -15,9 +15,9 @@ underlink_messagetype;
 typedef struct underlink_message
 {
 	underlink_messagetype message;
+	int payloadsize;
 	underlink_nodeID localID;
 	underlink_nodeID remoteID;
-	int payloadsize;
 	union
 	{
 		char packetbuffer[MTU];

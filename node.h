@@ -12,7 +12,7 @@ typedef struct underlink_node
 	underlink_nodeID		nodeID;
 	underlink_pubkey		publickey;
 	struct sockaddr_in		endpoint;
-	proto_nacl				crypto;
+//	proto_nacl				crypto;
 } underlink_node;
 
 typedef struct underlink_nodelist
