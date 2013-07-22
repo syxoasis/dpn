@@ -283,7 +283,7 @@ int main(int argc, char* argv[])
 				continue;
 			}
 						
-			sendIPPacket(buffer, readvalue, source, destination, headers);
+			sendIPPacket(buffer, readvalue, source.nodeID, destination.nodeID);
 			continue;
 		}
 		
@@ -317,7 +317,7 @@ int main(int argc, char* argv[])
 						if (message.localID.big == 0 && message.localID.small == 0)
 							break;
 						
-						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID, 0);
+						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID);
 					}
 					break;
 				
@@ -365,17 +365,19 @@ int main(int argc, char* argv[])
 	}
 }
 
-int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink_node destination, struct ip6_hdr* headers)
+int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underlink_nodeID destination)
 {
 	underlink_node closest;
 	memset(&closest, 0, sizeof(char) * 16);
 
-	closest = getClosestAddressFromBuckets(destination, 0);
+	underlink_node dst;
+	dst.nodeID = destination;
+	closest = getClosestAddressFromBuckets(dst, 0);
 
 	if (closest.nodeID.big == 0 && closest.nodeID.small == 0)
 	{
 		fprintf(stderr, "Remote node ");
-		printNodeIPAddress(stderr, &destination.nodeID);
+		printNodeIPAddress(stderr, &destination);
 		fprintf(stderr, " is not accessible; no intermediate router known\n");
 		return -1;
 	}
@@ -383,7 +385,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 	if (closest.endpoint.sin_addr.s_addr == 0)
 	{
 		fprintf(stderr, "Packet discarded: node ");
-		printNodeIPAddress(stderr, &destination.nodeID);
+		printNodeIPAddress(stderr, &destination);
 		fprintf(stderr, " has no remote endpoint\n");
 		return -1;
 	}
@@ -391,14 +393,14 @@ int sendIPPacket(char buffer[MTU], long length, underlink_node source, underlink
 	underlink_message msg;
 	msg.message = IPPACKET;
 	uint128_replace(&msg.localID, thisNode.nodeID);
-	uint128_replace(&msg.remoteID, destination.nodeID);
+	uint128_replace(&msg.remoteID, destination);
 	msg.payloadsize = length;
 	memcpy(msg.packetbuffer, buffer, length);
 	
 	if (debug)
 	{
 		fprintf(stderr, "Sending %lu bytes to node ", length);
-		printNodeIPAddress(stderr, &destination.nodeID);
+		printNodeIPAddress(stderr, &destination);
 		fprintf(stderr, " via ");
 		printNodeIPAddress(stderr, &closest.nodeID);
 		fprintf(stderr, "\n");
