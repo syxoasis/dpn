@@ -372,8 +372,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 
 	underlink_node dst;
 	dst.nodeID = destination;
-	closest = getClosestAddressFromBuckets(dst, 0);
-
+	
 	if (closest.nodeID.big == 0 && closest.nodeID.small == 0)
 	{
 		fprintf(stderr, "Remote node ");
@@ -381,7 +380,21 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		fprintf(stderr, " is not accessible; no intermediate router known\n");
 		return -1;
 	}
-
+	
+	int i;
+	for (i = 0; i < NODES_PER_BUCKET; i ++)
+	{
+		closest = getClosestAddressFromBuckets(dst, i);
+		
+		if (closest.endpoint.sin_addr.s_addr == 0)
+			continue;
+		
+		if (uint128_equals(closest.nodeID, source))
+			continue;
+		
+		break;
+	}
+	
 	if (closest.endpoint.sin_addr.s_addr == 0)
 	{
 		fprintf(stderr, "Packet discarded: node ");
@@ -389,7 +402,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		fprintf(stderr, " has no remote endpoint\n");
 		return -1;
 	}
-	
+		
 	if (uint128_equals(closest.nodeID, source))
 	{
 		fprintf(stderr, "Packet discarded: circular route for ");
