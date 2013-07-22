@@ -395,22 +395,6 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		return -1;
 	}
 	
-	if (closest.endpoint.sin_addr.s_addr == 0)
-	{
-		fprintf(stderr, "Packet discarded: node ");
-		printNodeIPAddress(stderr, &destination);
-		fprintf(stderr, " has no remote endpoint\n");
-		return -1;
-	}
-		
-	if (uint128_equals(closest.nodeID, source))
-	{
-		fprintf(stderr, "Packet discarded: circular route for ");
-		printNodeIPAddress(stderr, &destination);
-		fprintf(stderr, "\n");
-		return -1;
-	}
-	
 	underlink_message msg;
 	msg.message = IPPACKET;
 	uint128_replace(&msg.localID, thisNode.nodeID);
