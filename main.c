@@ -294,7 +294,6 @@ int main(int argc, char* argv[])
 			underlink_message message;
 			memset(&msg, 0, sizeof(underlink_message));
 			long readvalue = recvfrom(sockfd, &message, MTU, 0, (void*) &remote, &addrlen);
-			underlink_message_dump(&message);
 			
 			switch (message.message)
 			{
@@ -316,9 +315,7 @@ int main(int argc, char* argv[])
 						if (message.localID.big == 0 && message.localID.small == 0) break;
 						if ((-- message.ttl) == 0) break;
 						
-						msg = message;
-						
-						//sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID);
+						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID, message.ttl --);
 					}
 					break;
 				
@@ -354,6 +351,8 @@ int main(int argc, char* argv[])
 				continue;
 			
 			int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(underlink_message), 0, (struct sockaddr*) &remote, addrlen);
+			
+			
 			
 			if (sentlen <= 0)
 			{
