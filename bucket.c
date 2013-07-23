@@ -81,7 +81,7 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 			if ((nodes[n].nodeID.big == 0 && nodes[n].nodeID.small == 0) || &nodes[n] == 0)
 				continue;
 			
-			if (uint128_equals(check, nodes[n].nodeID))
+			if (uint128_equals(check.nodeID, nodes[n].nodeID))
 				return nodes[n];
 			
 			if (uint128_lessthan(getDistance(nodes[n], check), lastdist) ||
