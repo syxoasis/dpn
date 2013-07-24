@@ -299,7 +299,8 @@ int main(int argc, char* argv[])
 			switch (message.message)
 			{
 				case IPPACKET:
-					if (memcmp(&dst_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
+					if (uint128_equals(thisNode.nodeID, message.remoteID) ||
+						memcmp(&dst_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
 					{
 						if (write(tuntapfd, message.packetbuffer, message.payloadsize) <= 0)
 						{
@@ -311,7 +312,6 @@ int main(int argc, char* argv[])
 						else
 					{
 						if (uint128_equals(thisNode.nodeID, message.localID)) { printf("no 1\n"); break; }
-						if (uint128_equals(thisNode.nodeID, message.remoteID)) { printf("no 2\n"); break; }
 						if (message.localID.big == 0 && message.localID.small == 0) { printf("no 3\n"); break; }
 						if (message.ttl <= 0) { printf("no 4\n"); break; }
 						
