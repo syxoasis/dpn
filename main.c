@@ -310,10 +310,10 @@ int main(int argc, char* argv[])
 					}
 						else
 					{
-					//	if (uint128_equals(thisNode.nodeID, message.localID)) break;
-						if (uint128_equals(thisNode.nodeID, message.remoteID)) break;
-						if (message.localID.big == 0 && message.localID.small == 0) break;
-						if ((-- message.ttl) == 0) break;
+						if (uint128_equals(thisNode.nodeID, message.localID)) { printf("no 1\n"); break; }
+						if (uint128_equals(thisNode.nodeID, message.remoteID)) { printf("no 2\n"); break; }
+						if (message.localID.big == 0 && message.localID.small == 0) { printf("no 3\n"); break; }
+						if (message.ttl <= 0) { printf("no 4\n"); break; }
 						
 						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID, message.ttl --);
 					}
