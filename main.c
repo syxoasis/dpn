@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
 			switch (message.message)
 			{
 				case IPPACKET:
-					if (memcmp(src_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
+					if (memcmp(&dst_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
 					{
 						if (write(tuntapfd, message.packetbuffer, message.payloadsize) <= 0)
 						{
