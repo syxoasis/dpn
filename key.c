@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#include <sodium.h>
+
 #include "key.h"
 #include "node.h"
-#include "include/crypto_hash_sha512.h"
 
 void generateKey(underlink_pubkey* pk, underlink_seckey* sk)
 {

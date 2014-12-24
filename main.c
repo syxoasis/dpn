@@ -31,6 +31,7 @@
 #include "bucket.h"
 #include "message.h"
 #include "proto.h"
+#include "key.h"
 
 underlink_node buckets[sizeof(underlink_nodeID) * 8][NODES_PER_BUCKET];
 underlink_node thisNode;
@@ -106,7 +107,7 @@ int main(int argc, char* argv[])
 				int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(underlink_message), 0, (struct sockaddr*) &remote, addrlen);
 				
 				char foo[INET_ADDRSTRLEN];
-				inet_ntop(AF_INET, &remote.sin_addr, &foo, 128);
+				inet_ntop(AF_INET, &remote.sin_addr, (char*) &foo, 128);
 				
 				if (sentlen <= 0)
 				{
@@ -294,6 +295,13 @@ int main(int argc, char* argv[])
 			underlink_message message;
 			memset(&msg, 0, sizeof(underlink_message));
 			long readvalue = recvfrom(sockfd, &message, MTU, 0, (void*) &remote, &addrlen);
+
+			if (readvalue < 0)
+                        {
+                                perror("read");
+                                return -1;
+                        }
+
 			underlink_message_dump(&message);
 			
 			switch (message.message)
@@ -344,6 +352,7 @@ int main(int argc, char* argv[])
 					break;
 					
 				case NOT_FORWARDED:
+				case UNSPEC_ERROR:
 					break;
 			}
 			
@@ -421,4 +430,6 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		fprintf(stderr, ":\n -> ");
 		perror("sendto");
 	}
+
+	return 0;
 }

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "include/crypto_box_curve25519xsalsa20poly1305.h"
-#include "include/crypto_scalarmult_curve25519.h"
+#include <sodium.h>
 
 #define uint64 unsigned long long
 #define noncelength 16

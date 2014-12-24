@@ -93,7 +93,7 @@ int proto_encode(proto_nacl inst, unsigned char* input, unsigned char* output, u
 	len += crypto_box_curve25519xsalsa20poly1305_ZEROBYTES;
 	
 	taia_now(&inst.cdtaie);
-	taia_pack(inst.encnonce + nonceoffset, &(inst.cdtaie));
+	taia_pack((char*) inst.encnonce + nonceoffset, &(inst.cdtaie));
 
 	int result = crypto_box_curve25519xsalsa20poly1305_afternm(
 		output,

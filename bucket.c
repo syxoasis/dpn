@@ -5,6 +5,7 @@
 #include <limits.h>
 #include "node.h"
 #include "main.h"
+#include "uint128.h"
 
 extern underlink_node thisNode;
 extern underlink_node buckets[sizeof(underlink_nodeID) * 8][NODES_PER_BUCKET];
@@ -30,7 +31,7 @@ int getBucketID(underlink_node check)
 	nhThisNode.big = ntohll(thisNode.nodeID.big);
 	nhThisNode.small = ntohll(thisNode.nodeID.small);
 
-	int i;
+	unsigned long i;
 	for (i = 0; i < sizeof(underlink_nodeID) * 8; i ++)
 	{
 		if (i < 64)
@@ -68,7 +69,7 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 	underlink_node returnnode;
 	memset(&returnnode.nodeID, 0, sizeof(underlink_nodeID));
 
-	int b;
+	unsigned long b;
 	for (b = 0; b < sizeof(underlink_nodeID) * 8; b ++)
 	{
 		underlink_node nodes[NODES_PER_BUCKET];

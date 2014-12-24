@@ -1,6 +1,12 @@
 #include "uint128.h"
+
+#ifndef ntohll
 #define ntohll(x) (((uint64_t)(ntohl((uint32_t)((x << 32) >> 32))) << 32) | ntohl(((uint32_t)(x >> 32))))
+#endif
+
+#ifndef htonll
 #define htonll(x) ntohll(x)
+#endif
 
 uint128_t uint128_xor(uint128_t a, uint128_t b)
 {
