@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
 	
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
 	
-	if (nodename == NULL)
+	if (nodename)
 		strcpy(nodename, "/dev/tun0");
 		
 	char prefix[128];
