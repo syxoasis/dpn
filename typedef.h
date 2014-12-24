@@ -57,7 +57,7 @@ typedef struct underlink_message
 underlink_message;
 
 #ifndef ntohll
-#define ntohll(x) (((uint64_t)(ntohl((uint32_t)((x << 32) >> 32))) << 32) | ntohl(((uint32_t)(x >> 32))))                                      $
+#define ntohll(x) (((uint64_t)(ntohl((uint32_t)((x << 32) >> 32))) << 32) | ntohl(((uint32_t)(x >> 32))))
 #endif
 
 #ifndef htonll
