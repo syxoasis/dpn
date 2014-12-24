@@ -26,11 +26,8 @@ install: all
 	mkdir -p $(BINDIR) $(SYSCONFDIR) $(LIBEXECDIR)
 	cp $(TARGETS_BIN) $(BINDIR)
 
-proto.o: proto.c
-	$(CC) $(CPPFLAGS) $(SODIUM_CPPFLAGS) proto.c -o proto.o $(DYLIB_CFLAGS) $(SODIUM_LDFLAGS)
-
 underlink: bucket.o key.o main.o message.o node.o proto.o uint128.o
 	$(CC) -o underlink bucket.o key.o main.o message.o node.o proto.o uint128.o $(LDFLAGS)
 
 %.o: %.c $(HEADERS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(SODIUM_CPPFLAGS) -c $< -o $@

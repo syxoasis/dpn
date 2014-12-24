@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
 	
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
 	
-	if (nodename)
+	if (nodename == NULL)
 		strcpy(nodename, "/dev/tun0");
 		
 	char prefix[128];
@@ -200,6 +200,9 @@ int main(int argc, char* argv[])
 		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
 	
 		int ret = ioctl(conffd, SIOCSIFFLAGS, &ifr);
+
+		if (ret < 0)
+			perror("ioctl");
 	
 		close(conffd);
 	#else

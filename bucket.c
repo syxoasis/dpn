@@ -15,7 +15,7 @@ void printbits(unsigned long long b, int n)
 	for (--n; n >= 0; --n)
 	{
 		printf("%c", (b & 1ULL << n) ? '1' : '0');
-		if ((n) % 8 == 0) printf("");
+		// if ((n) % 8 == 0) printf("");
 	}
 	printf(" ");
 }
@@ -147,7 +147,7 @@ int addNodeToBuckets(underlink_node newnode)
 		printf(" in bucket %i\n", b);
 	}
 				
-	memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
+	memcpy(&buckets[b][n - 1], &newnode, sizeof(underlink_node));
 	
 	return b;
 }
