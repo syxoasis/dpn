@@ -59,10 +59,14 @@ int keyComparator(const void* a, const void* b)
 
 dpn_node getClosestAddressFromBuckets(dpn_node check, int steps)
 {
-	int startBucket = getBucketID(check);
-	if (startBucket == 0 || uint128_equals(thisNode.nodeID, check.nodeID))
+	// int startBucket = getBucketID(check);
+	// if (startBucket == 0 || uint128_equals(thisNode.nodeID, check.nodeID))
+	//	return thisNode;
+	
+	int startBucket = 0;
+	if (uint128_equals(thisNode.nodeID, check.nodeID))
 		return thisNode;
-		
+
 	uint128_t lastdist;
 	memset(&lastdist, 0, sizeof(uint128_t));
 	
@@ -78,7 +82,7 @@ dpn_node getClosestAddressFromBuckets(dpn_node check, int steps)
 
 		int n;
 		for (n = steps; n < NODES_PER_BUCKET; n ++)
-		{			
+		{
 			if ((nodes[n].nodeID.big == 0 && nodes[n].nodeID.small == 0) || &nodes[n] == 0)
 				continue;
 			

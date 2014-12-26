@@ -326,7 +326,15 @@ int main(int argc, char* argv[])
 						if (message.localID.big == 0 && message.localID.small == 0) { printf("no 3\n"); break; }
 						if (message.ttl <= 0) { printf("no 4\n"); break; }
 						
-						sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID, message.ttl --);
+						if (sendIPPacket(message.packetbuffer, message.payloadsize, message.localID, message.remoteID, message.ttl --) < 0)
+						{
+							msg.message = NOT_FORWARDED;
+							uint128_replace(&msg.localID, thisNode.nodeID);
+							uint128_replace(&msg.remoteID, message.node.nodeID);
+							memcpy(&msg.packetbuffer, message.packetbuffer, message.payloadsize);
+							msg.payloadsize = message.payloadsize;
+							msg.ttl = 1;
+						}
 					}
 					break;
 				
@@ -343,7 +351,7 @@ int main(int argc, char* argv[])
 					addNodeToBuckets(message.node);
 					msg.message = VERIFY_SUCCESS;
 					msg.localID = thisNode.nodeID;
-					msg.remoteID = message.localID;					
+					msg.remoteID = message.localID;
 					msg.payloadsize = sizeof(dpn_node);
 					msg.ttl = 1;
 					memcpy(&msg.node, &thisNode, msg.payloadsize);
@@ -355,6 +363,8 @@ int main(int argc, char* argv[])
 					break;
 					
 				case NOT_FORWARDED:
+				case NOT_FORWARDED_TTL:
+				case FORWARDED:
 				case UNSPEC_ERROR:
 					break;
 			}
@@ -363,8 +373,6 @@ int main(int argc, char* argv[])
 				continue;
 			
 			int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(dpn_message), 0, (struct sockaddr*) &remote, addrlen);
-			
-			
 			
 			if (sentlen <= 0)
 			{
@@ -404,6 +412,7 @@ int sendIPPacket(char buffer[MTU], long length, dpn_nodeID source, dpn_nodeID de
 		fprintf(stderr, "Remote node ");
 		printNodeIPAddress(stderr, &destination);
 		fprintf(stderr, " is not accessible; no intermediate router known\n");
+
 		return -1;
 	}
 	
