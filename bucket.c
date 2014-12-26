@@ -40,10 +40,10 @@ int getBucketID(dpn_node check)
 			bits.big <<= 1;
 		
 		if (uint128_maskequals(check.nodeID, bits, nhThisNode, bits))
-			return (sizeof(dpn_nodeID) * 8) - i;
+			return (sizeof(dpn_nodeID) * 8) - i - 1;
 	}
 
-	return sizeof(dpn_nodeID) * 8;
+	return sizeof(dpn_nodeID) * 8 - 1;
 }
 
 int keyComparator(const void* a, const void* b)
@@ -101,9 +101,15 @@ int addNodeToBuckets(dpn_node newnode)
 {
 	int b = getBucketID(newnode);
 	int n;
+
+	if (debug)
+		printf("addNodeToBuckets: bucket ID %i\n", b);
 	
 	for (n = 0; n < NODES_PER_BUCKET; n ++)
 	{
+		if (&buckets[b][n] == 0)
+			continue;
+
 		if (uint128_equals(buckets[b][n].nodeID, thisNode.nodeID))
 			return b;
 	}
