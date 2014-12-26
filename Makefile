@@ -11,7 +11,7 @@ LDFLAGS += $(SODIUM_LDFLAGS) -ldl -pthread
 DYLIB_CFLAGS ?= $(CFLAGS) -shared
 
 TARGETS_OBJS = bucket.o key.o main.o message.o node.o proto.o uint128.o
-TARGETS_BIN = underlink
+TARGETS_BIN = dpn
 
 TARGETS = $(TARGETS_OBJS) $(TARGETS_BIN)
 
@@ -26,8 +26,8 @@ install: all
 	mkdir -p $(BINDIR) $(SYSCONFDIR) $(LIBEXECDIR)
 	cp $(TARGETS_BIN) $(BINDIR)
 
-underlink: bucket.o key.o main.o message.o node.o proto.o uint128.o
-	$(CC) -o underlink bucket.o key.o main.o message.o node.o proto.o uint128.o $(LDFLAGS)
+dpn: bucket.o key.o main.o message.o node.o proto.o uint128.o
+	$(CC) -o dpn bucket.o key.o main.o message.o node.o proto.o uint128.o $(LDFLAGS)
 
 %.o: %.c $(HEADERS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(SODIUM_CPPFLAGS) -c $< -o $@

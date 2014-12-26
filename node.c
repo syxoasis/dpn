@@ -5,12 +5,12 @@
 #include "node.h"
 #include "uint128.h"
 
-uint128_t getDistance(underlink_node one, underlink_node two)
+uint128_t getDistance(dpn_node one, dpn_node two)
 {
 	return uint128_xor(one.nodeID, two.nodeID);
 }
 
-void printNodeIPAddress(FILE* pipe, underlink_nodeID* nodeID)
+void printNodeIPAddress(FILE* pipe, dpn_nodeID* nodeID)
 {
 	char presentational[164];
 	memset(&presentational, 0, 164);

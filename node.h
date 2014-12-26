@@ -5,5 +5,5 @@
 #include "proto.h"
 #include "uint128.h"
 
-uint128_t getDistance(underlink_node one, underlink_node two);
-void printNodeIPAddress(FILE* pipe, underlink_nodeID* nodeID);
+uint128_t getDistance(dpn_node one, dpn_node two);
+void printNodeIPAddress(FILE* pipe, dpn_nodeID* nodeID);

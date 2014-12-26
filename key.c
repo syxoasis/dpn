@@ -5,10 +5,10 @@
 #include "key.h"
 #include "node.h"
 
-void generateKey(underlink_pubkey* pk, underlink_seckey* sk)
+void generateKey(dpn_pubkey* pk, dpn_seckey* sk)
 {
-	underlink_pubkey genpk;
-	underlink_seckey gensk;
+	dpn_pubkey genpk;
+	dpn_seckey gensk;
 	
 	while (!isPublicKeyValid(genpk))
 	{
@@ -18,21 +18,21 @@ void generateKey(underlink_pubkey* pk, underlink_seckey* sk)
 		);
 	}
 	
-	memcpy(pk, genpk, sizeof(underlink_pubkey));
-	memcpy(sk, gensk, sizeof(underlink_seckey));
+	memcpy(pk, genpk, sizeof(dpn_pubkey));
+	memcpy(sk, gensk, sizeof(dpn_seckey));
 }
 
-void getNodeIDFromKey(underlink_nodeID* id, underlink_pubkey pk)
+void getNodeIDFromKey(dpn_nodeID* id, dpn_pubkey pk)
 {
 	uint8_t h[crypto_hash_sha512_BYTES];
-	crypto_hash_sha512(h, (unsigned char*) pk, underlink_pklen);
+	crypto_hash_sha512(h, (unsigned char*) pk, dpn_pklen);
     crypto_hash_sha512((uint8_t*) id, h, crypto_hash_sha512_BYTES);
 }
 
-int isPublicKeyValid(underlink_pubkey pk)
+int isPublicKeyValid(dpn_pubkey pk)
 {
 	uint8_t h[crypto_hash_sha512_BYTES];
-	getNodeIDFromKey((underlink_nodeID*) &h, pk);
+	getNodeIDFromKey((dpn_nodeID*) &h, pk);
 	
 	return h[0] == 0xFD;
 }

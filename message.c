@@ -5,20 +5,20 @@
 #include "node.h"
 #include "message.h"
 
-int underlink_message_pack(void* out, underlink_message* packet)
+int dpn_message_pack(void* out, dpn_message* packet)
 {
-	int size = sizeof(underlink_message) + packet->payloadsize;
+	int size = sizeof(dpn_message) + packet->payloadsize;
 	memcpy(out, packet, size);
 	return size;
 }
 
-int underlink_message_unpack(underlink_message* out, void* buffer, int buffersize)
+int dpn_message_unpack(dpn_message* out, void* buffer, int buffersize)
 {
 	memcpy(out, buffer, buffersize);
 	return buffersize;
 }
 
-void underlink_message_makeLittleEndian(underlink_message* msg)
+void dpn_message_makeLittleEndian(dpn_message* msg)
 {
 	msg->message = ntohl(msg->message);
 	uint128_makeLittleEndian(&msg->localID);
@@ -26,7 +26,7 @@ void underlink_message_makeLittleEndian(underlink_message* msg)
 	msg->payloadsize = ntohl(msg->payloadsize);
 }
 
-void underlink_message_makeBigEndian(underlink_message* msg)
+void dpn_message_makeBigEndian(dpn_message* msg)
 {
 	msg->message = htonl(msg->message);
 	uint128_makeBigEndian(&msg->localID);
@@ -34,7 +34,7 @@ void underlink_message_makeBigEndian(underlink_message* msg)
 	msg->payloadsize = htonl(msg->payloadsize);
 }
 
-void underlink_message_dump(underlink_message* packet)
+void dpn_message_dump(dpn_message* packet)
 {
 	printf("Message ID: 0x%X, payload size: %i, time-to-live: %i\n", packet->message, packet->payloadsize, packet->ttl);
 	printf("\tLocal ");

@@ -1,6 +1,6 @@
 #pragma once
 
-int getBucketID(underlink_node check);
-underlink_node getClosestAddressFromBuckets(underlink_node check, int stepse);
-int addNodeToBuckets(underlink_node newnode);
-int nodeIDComparator(const underlink_node* a, const underlink_node* b);
+int getBucketID(dpn_node check);
+dpn_node getClosestAddressFromBuckets(dpn_node check, int stepse);
+int addNodeToBuckets(dpn_node newnode);
+int nodeIDComparator(const dpn_node* a, const dpn_node* b);

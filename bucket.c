@@ -7,8 +7,8 @@
 #include "main.h"
 #include "uint128.h"
 
-extern underlink_node thisNode;
-extern underlink_node buckets[sizeof(underlink_nodeID) * 8][NODES_PER_BUCKET];
+extern dpn_node thisNode;
+extern dpn_node buckets[sizeof(dpn_nodeID) * 8][NODES_PER_BUCKET];
 
 void printbits(unsigned long long b, int n)
 {
@@ -20,7 +20,7 @@ void printbits(unsigned long long b, int n)
 	printf(" ");
 }
 
-int getBucketID(underlink_node check)
+int getBucketID(dpn_node check)
 {
 	uint128_t bits;
 	memset(&bits, ~0, sizeof(uint128_t));
@@ -32,7 +32,7 @@ int getBucketID(underlink_node check)
 	nhThisNode.small = ntohll(thisNode.nodeID.small);
 
 	unsigned long i;
-	for (i = 0; i < sizeof(underlink_nodeID) * 8; i ++)
+	for (i = 0; i < sizeof(dpn_nodeID) * 8; i ++)
 	{
 		if (i < 64)
 			bits.small <<= 1;
@@ -40,16 +40,16 @@ int getBucketID(underlink_node check)
 			bits.big <<= 1;
 		
 		if (uint128_maskequals(check.nodeID, bits, nhThisNode, bits))
-			return (sizeof(underlink_nodeID) * 8) - i;
+			return (sizeof(dpn_nodeID) * 8) - i;
 	}
 
-	return sizeof(underlink_nodeID) * 8;
+	return sizeof(dpn_nodeID) * 8;
 }
 
 int keyComparator(const void* a, const void* b)
 {
-	uint128_t distFromA = getDistance(thisNode, *(struct underlink_node*) &a);
-	uint128_t distFromB = getDistance(thisNode, *(struct underlink_node*) &b);
+	uint128_t distFromA = getDistance(thisNode, *(struct dpn_node*) &a);
+	uint128_t distFromB = getDistance(thisNode, *(struct dpn_node*) &b);
 	
 	if (uint128_lessthan(distFromA, distFromB)) return 1;
 	if (uint128_greaterthan(distFromA, distFromB)) return -1;
@@ -57,7 +57,7 @@ int keyComparator(const void* a, const void* b)
 	return 0;
 }
 
-underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
+dpn_node getClosestAddressFromBuckets(dpn_node check, int steps)
 {
 	int startBucket = getBucketID(check);
 	if (startBucket == 0 || uint128_equals(thisNode.nodeID, check.nodeID))
@@ -66,15 +66,15 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 	uint128_t lastdist;
 	memset(&lastdist, 0, sizeof(uint128_t));
 	
-	underlink_node returnnode;
-	memset(&returnnode.nodeID, 0, sizeof(underlink_nodeID));
+	dpn_node returnnode;
+	memset(&returnnode.nodeID, 0, sizeof(dpn_nodeID));
 
 	unsigned long b;
-	for (b = 0; b < sizeof(underlink_nodeID) * 8; b ++)
+	for (b = 0; b < sizeof(dpn_nodeID) * 8; b ++)
 	{
-		underlink_node nodes[NODES_PER_BUCKET];
-		memcpy(&nodes, &buckets[b], sizeof(struct underlink_node) * NODES_PER_BUCKET);
-		qsort(&nodes, NODES_PER_BUCKET, sizeof(struct underlink_node), keyComparator);
+		dpn_node nodes[NODES_PER_BUCKET];
+		memcpy(&nodes, &buckets[b], sizeof(struct dpn_node) * NODES_PER_BUCKET);
+		qsort(&nodes, NODES_PER_BUCKET, sizeof(struct dpn_node), keyComparator);
 
 		int n;
 		for (n = steps; n < NODES_PER_BUCKET; n ++)
@@ -97,7 +97,7 @@ underlink_node getClosestAddressFromBuckets(underlink_node check, int steps)
 	return returnnode;
 }
 
-int addNodeToBuckets(underlink_node newnode)
+int addNodeToBuckets(dpn_node newnode)
 {
 	int b = getBucketID(newnode);
 	int n;
@@ -112,7 +112,7 @@ int addNodeToBuckets(underlink_node newnode)
 	{
 		if (buckets[b][n].nodeID.big == 0 && buckets[b][n].nodeID.small == 0)
 		{
-			memcpy(&buckets[b][n], &newnode, sizeof(underlink_node));
+			memcpy(&buckets[b][n], &newnode, sizeof(dpn_node));
 			
 			if (debug)
 			{
@@ -147,7 +147,7 @@ int addNodeToBuckets(underlink_node newnode)
 		printf(" in bucket %i\n", b);
 	}
 				
-	memcpy(&buckets[b][n - 1], &newnode, sizeof(underlink_node));
+	memcpy(&buckets[b][n - 1], &newnode, sizeof(dpn_node));
 	
 	return b;
 }

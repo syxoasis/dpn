@@ -33,13 +33,13 @@
 #include "proto.h"
 #include "key.h"
 
-underlink_node buckets[sizeof(underlink_nodeID) * 8][NODES_PER_BUCKET];
-underlink_node thisNode;
+dpn_node buckets[sizeof(dpn_nodeID) * 8][NODES_PER_BUCKET];
+dpn_node thisNode;
 
 int sockfd, tuntapfd;
 
-underlink_pubkey localPublicKey;
-underlink_seckey localSecretKey;
+dpn_pubkey localPublicKey;
+dpn_seckey localSecretKey;
 
 int max(int a, int b)
 {
@@ -53,14 +53,14 @@ int main(int argc, char* argv[])
 	char nodename[16];
 	fd_set selectlist;
 	
-	underlink_message msg;
+	dpn_message msg;
 	struct sockaddr_in remote;
 	remote.sin_family = AF_INET;
 	socklen_t addrlen = sizeof(remote);
 	
-	memset(&msg, 0, sizeof(underlink_message));
-	memset(&buckets, 0, sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET);
-	memset(&thisNode, 0, sizeof(underlink_node));
+	memset(&msg, 0, sizeof(dpn_message));
+	memset(&buckets, 0, sizeof(dpn_node) * sizeof(dpn_nodeID) * NODES_PER_BUCKET);
+	memset(&thisNode, 0, sizeof(dpn_node));
 	
 	generateKey(&localPublicKey, &localSecretKey);
 	getNodeIDFromKey(&thisNode.nodeID, localPublicKey);
@@ -92,10 +92,10 @@ int main(int argc, char* argv[])
 			case 'b':
 				msg.message = VERIFY;
 				msg.localID = thisNode.nodeID;
-				msg.payloadsize = sizeof(underlink_node);
+				msg.payloadsize = sizeof(dpn_node);
 				msg.ttl = 1;
 				memcpy(&msg.node, &thisNode, msg.payloadsize);
-				underlink_message_dump(&msg);
+				dpn_message_dump(&msg);
 				
 				int p = inet_pton(PF_INET, optarg, &remote.sin_addr);
 				if (p < 0)
@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
 				remote.sin_family = AF_INET;
 				remote.sin_port = htons(portnumber);
 				
-				int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(underlink_message), 0, (struct sockaddr*) &remote, addrlen);
+				int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(dpn_message), 0, (struct sockaddr*) &remote, addrlen);
 				
 				char foo[INET_ADDRSTRLEN];
 				inet_ntop(AF_INET, &remote.sin_addr, (char*) &foo, 128);
@@ -128,10 +128,10 @@ int main(int argc, char* argv[])
 	if (debug)
 	{
 		printf("Using UDP port %i\n", portnumber);
-		printf("Maximum peer count: %lu\n", sizeof(underlink_nodeID) * NODES_PER_BUCKET);
-		printf("%lu-bit peer address space\n", sizeof(underlink_nodeID) * 8);
+		printf("Maximum peer count: %lu\n", sizeof(dpn_nodeID) * NODES_PER_BUCKET);
+		printf("%lu-bit peer address space\n", sizeof(dpn_nodeID) * 8);
 		printf("Bucket table size in memory: %lukb\n",
-			(sizeof(underlink_node) * sizeof(underlink_nodeID) * NODES_PER_BUCKET) / 24);
+			(sizeof(dpn_node) * sizeof(dpn_nodeID) * NODES_PER_BUCKET) / 24);
 	}
 	
 	inet_pton(AF_INET, "127.0.0.1", &thisNode.endpoint.sin_addr);
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
 		strcpy(nodename, "/dev/tun0");
 		
 	char prefix[128];
-	memcpy((void*) &prefix, (void*) &thisNode.nodeID, sizeof(underlink_nodeID));
+	memcpy((void*) &prefix, (void*) &thisNode.nodeID, sizeof(dpn_nodeID));
 	
 	printf("Interface prefix: ");
 	printNodeIPAddress(stdout, &thisNode.nodeID);
@@ -260,7 +260,7 @@ int main(int argc, char* argv[])
 		if (FD_ISSET(tuntapfd, &selectlist) != 0)
 		{
 			memset(&buffer, 0, MTU);
-			memset(&msg, 0, sizeof(underlink_message));
+			memset(&msg, 0, sizeof(dpn_message));
 			long readvalue = read(tuntapfd, &buffer, MTU);
 			
 			if (readvalue < 0)
@@ -273,11 +273,11 @@ int main(int argc, char* argv[])
 				src_addr->s6_addr[0] != 0xFD)
 				continue;
 		
-			struct underlink_node source, destination;
-			memcpy((void*) &source.nodeID, src_addr, sizeof(underlink_nodeID));
-			memcpy((void*) &destination.nodeID, dst_addr, sizeof(underlink_nodeID));
+			struct dpn_node source, destination;
+			memcpy((void*) &source.nodeID, src_addr, sizeof(dpn_nodeID));
+			memcpy((void*) &destination.nodeID, dst_addr, sizeof(dpn_nodeID));
 			
-			if (memcmp(&src_addr->s6_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) != 0)
+			if (memcmp(&src_addr->s6_addr, &thisNode.nodeID, sizeof(dpn_nodeID)) != 0)
 			{
 				if (debug)
 				{
@@ -295,8 +295,8 @@ int main(int argc, char* argv[])
 		
 		if (FD_ISSET(sockfd, &selectlist) != 0)
 		{
-			underlink_message message;
-			memset(&msg, 0, sizeof(underlink_message));
+			dpn_message message;
+			memset(&msg, 0, sizeof(dpn_message));
 			long readvalue = recvfrom(sockfd, &message, MTU, 0, (void*) &remote, &addrlen);
 
 			if (readvalue < 0)
@@ -305,13 +305,13 @@ int main(int argc, char* argv[])
                                 return -1;
                         }
 
-			underlink_message_dump(&message);
+			dpn_message_dump(&message);
 			
 			switch (message.message)
 			{
 				case IPPACKET:
 					if (uint128_equals(thisNode.nodeID, message.remoteID) ||
-						memcmp(&dst_addr, &thisNode.nodeID, sizeof(underlink_nodeID)) == 0)
+						memcmp(&dst_addr, &thisNode.nodeID, sizeof(dpn_nodeID)) == 0)
 					{
 						if (write(tuntapfd, message.packetbuffer, message.payloadsize) <= 0)
 						{
@@ -344,7 +344,7 @@ int main(int argc, char* argv[])
 					msg.message = VERIFY_SUCCESS;
 					msg.localID = thisNode.nodeID;
 					msg.remoteID = message.localID;					
-					msg.payloadsize = sizeof(underlink_node);
+					msg.payloadsize = sizeof(dpn_node);
 					msg.ttl = 1;
 					memcpy(&msg.node, &thisNode, msg.payloadsize);
 					break;
@@ -362,7 +362,7 @@ int main(int argc, char* argv[])
 			if (msg.localID.big == 0 && msg.localID.small == 0)
 				continue;
 			
-			int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(underlink_message), 0, (struct sockaddr*) &remote, addrlen);
+			int sentlen = sendto(sockfd, (char*) &msg, msg.payloadsize + sizeof(dpn_message), 0, (struct sockaddr*) &remote, addrlen);
 			
 			
 			
@@ -377,12 +377,12 @@ int main(int argc, char* argv[])
 	}
 }
 
-int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underlink_nodeID destination, int ttl)
+int sendIPPacket(char buffer[MTU], long length, dpn_nodeID source, dpn_nodeID destination, int ttl)
 {
-	underlink_node closest;
+	dpn_node closest;
 	memset(&closest, 0, sizeof(char) * 16);
 
-	underlink_node dst;
+	dpn_node dst;
 	dst.nodeID = destination;
 	
 	int i;
@@ -407,7 +407,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		return -1;
 	}
 	
-	underlink_message msg;
+	dpn_message msg;
 	msg.message = IPPACKET;
 	uint128_replace(&msg.localID, thisNode.nodeID);
 	uint128_replace(&msg.remoteID, destination);
@@ -424,7 +424,7 @@ int sendIPPacket(char buffer[MTU], long length, underlink_nodeID source, underli
 		fprintf(stderr, "\n");
 	}
 		
-	int sentlen = sendto(sockfd, (char*) &msg, length + sizeof(underlink_message), 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint));
+	int sentlen = sendto(sockfd, (char*) &msg, length + sizeof(dpn_message), 0, (struct sockaddr*) &closest.endpoint, sizeof(closest.endpoint));
 	
 	if (sentlen <= 0)
 	{
